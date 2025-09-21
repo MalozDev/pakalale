@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
@@ -19,6 +19,7 @@ function ChatPage() {
   const { dealId } = useParams<{ dealId: string }>();
   const location = useLocation();
   const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get deal data from navigation state
   const dealData = location.state as {
@@ -93,6 +94,11 @@ function ChatPage() {
 
       setMessages((prev) => [...prev, newMsg]);
       setNewMessage("");
+
+      // Auto-scroll to bottom after sending message
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     }
   };
 
@@ -114,6 +120,16 @@ function ChatPage() {
       navigate("/deals");
     }
   }, [dealData, navigate]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   if (!dealData) {
     return null;
@@ -231,6 +247,7 @@ function ChatPage() {
                   <MessageBubble key={message.id} message={message} />
                 ))}
               </AnimatePresence>
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}

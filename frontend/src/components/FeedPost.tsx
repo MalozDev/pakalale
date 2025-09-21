@@ -66,6 +66,22 @@ function FeedPost({
   const [newComment, setNewComment] = useState("");
   const [imageIndex, setImageIndex] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [comments, setComments] = useState([
+    {
+      id: "1",
+      author: "John Doe",
+      content: "Great deal! Is this still available?",
+      timestamp: "2h ago",
+      avatar: "blue",
+    },
+    {
+      id: "2",
+      author: "Jane Smith",
+      content: "I'm interested! Can you deliver to Kamwala?",
+      timestamp: "1h ago",
+      avatar: "green",
+    },
+  ]);
 
   const handleLike = () => {
     onLike(post.id);
@@ -74,6 +90,21 @@ function FeedPost({
   const handleComment = () => {
     setShowComments(!showComments);
     onComment(post.id);
+  };
+
+  const handlePostComment = () => {
+    if (newComment.trim()) {
+      // Add new comment to the list
+      const newCommentObj = {
+        id: Date.now().toString(),
+        author: "You",
+        content: newComment.trim(),
+        timestamp: "Just now",
+        avatar: "primary",
+      };
+      setComments((prev) => [...prev, newCommentObj]);
+      setNewComment("");
+    }
   };
 
   const handleShare = () => {
@@ -167,7 +198,7 @@ function FeedPost({
               )}
               {post.isPromotion && (
                 <span className="px-1.5 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded-full flex-shrink-0">
-                  Promotion
+                  Promo
                 </span>
               )}
             </div>
@@ -323,59 +354,72 @@ function FeedPost({
 
       {/* Action Buttons */}
       <div className="px-3 sm:px-4 py-2 border-t border-slate-700">
-        <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center justify-between gap-1 flex-wrap">
+          {/* Like Button */}
           <button
             onClick={handleLike}
-            className={`flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg transition-colors duration-200 flex-1 justify-center ${
+            className={`flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg transition-colors duration-200 flex-1 justify-center min-w-0 ${
               post.isLiked
                 ? "text-red-400 hover:bg-red-500/10"
                 : "text-slate-400 hover:text-red-400 hover:bg-red-500/10"
             }`}
           >
             <Heart
-              className={`h-3 w-3 sm:h-4 sm:w-4 ${
+              className={`h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 ${
                 post.isLiked ? "fill-current" : ""
               }`}
             />
-            <span className="text-xs sm:text-sm font-medium">Like</span>
+            <span className="text-xs sm:text-sm font-medium truncate">
+              Like
+            </span>
           </button>
 
+          {/* Comment Button */}
           <button
             onClick={handleComment}
-            className="flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors duration-200 flex-1 justify-center"
+            className="flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors duration-200 flex-1 justify-center min-w-0"
           >
-            <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm font-medium">Comment</span>
+            <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium truncate">
+              Comment
+            </span>
           </button>
 
+          {/* Share Button */}
           <button
             onClick={handleShare}
-            className="flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg text-slate-400 hover:text-green-400 hover:bg-green-500/10 transition-colors duration-200 flex-1 justify-center"
+            className="flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg text-slate-400 hover:text-green-400 hover:bg-green-500/10 transition-colors duration-200 flex-1 justify-center min-w-0"
           >
-            <Share className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm font-medium">Share</span>
+            <Share className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium truncate">
+              Share
+            </span>
           </button>
 
-          {/* Contact Button for All Posts */}
-          <div className="flex space-x-1">
-            {post.author.role === "shop_owner" && post.product && (
-              <button
-                onClick={handleMakeDeal}
-                className="bg-amber-golden hover:bg-amber-600 text-white px-2 py-2 rounded-lg text-xs font-medium transition-colors duration-200 flex items-center space-x-1"
-              >
-                <ShoppingBag className="h-3 w-3" />
-                <span className="text-xs font-medium">Deal</span>
-              </button>
-            )}
+          {/* Contact Button - Always Visible */}
+          <button
+            onClick={handleContactShop}
+            className="flex items-center space-x-1 px-2 sm:px-3 py-2 text-slate-400 hover:text-teal-dark hover:bg-teal-dark/10 rounded-lg transition-colors duration-200 flex-1 justify-center min-w-0"
+            title="Contact"
+          >
+            <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium truncate">
+              Contact
+            </span>
+          </button>
+
+          {/* Deal Button - Only for Shop Owners with Products */}
+          {post.author.role === "shop_owner" && post.product && (
             <button
-              onClick={handleContactShop}
-              className="flex items-center space-x-1 px-2 py-2 text-slate-400 hover:text-teal-dark hover:bg-teal-dark/10 rounded-lg transition-colors duration-200"
-              title="Contact"
+              onClick={handleMakeDeal}
+              className="bg-amber-golden hover:bg-amber-600 text-white px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 flex items-center space-x-1 flex-1 justify-center min-w-0"
             >
-              <Phone className="h-3 w-3" />
-              <span className="text-xs font-medium">Contact</span>
+              <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm font-medium truncate">
+                Deal
+              </span>
             </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -388,68 +432,71 @@ function FeedPost({
             exit={{ opacity: 0, height: 0 }}
             className="border-t border-slate-700"
           >
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
               {/* Comment Input */}
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+              <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex-1 flex items-center space-x-2">
+                <div className="flex-1 flex items-center space-x-2 min-w-0">
                   <input
                     type="text"
                     placeholder="Write a comment..."
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handlePostComment();
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm sm:text-base min-w-0"
                   />
                   <button
+                    onClick={handlePostComment}
                     disabled={!newComment.trim()}
-                    className="bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                    className="bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 flex-shrink-0"
                   >
                     Post
                   </button>
                 </div>
               </div>
 
-              {/* Sample Comments */}
+              {/* Comments List */}
               <div className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="bg-slate-700 rounded-lg p-3">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-slate-100 text-sm">
-                          John Doe
-                        </span>
-                        <span className="text-xs text-slate-500">2h ago</span>
+                {comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="flex items-start space-x-2 sm:space-x-3"
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        comment.avatar === "blue"
+                          ? "bg-gradient-to-r from-blue-500 to-blue-600"
+                          : comment.avatar === "green"
+                          ? "bg-gradient-to-r from-green-500 to-green-600"
+                          : "bg-gradient-to-r from-primary-500 to-primary-600"
+                      }`}
+                    >
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-slate-700 rounded-lg p-3">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-medium text-slate-100 text-sm">
+                            {comment.author}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {comment.timestamp}
+                          </span>
+                        </div>
+                        <p className="text-slate-300 text-sm break-words">
+                          {comment.content}
+                        </p>
                       </div>
-                      <p className="text-slate-300 text-sm">
-                        Great deal! Is this still available?
-                      </p>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="bg-slate-700 rounded-lg p-3">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-medium text-slate-100 text-sm">
-                          Jane Smith
-                        </span>
-                        <span className="text-xs text-slate-500">1h ago</span>
-                      </div>
-                      <p className="text-slate-300 text-sm">
-                        I'm interested! Can you deliver to Kamwala?
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </motion.div>
