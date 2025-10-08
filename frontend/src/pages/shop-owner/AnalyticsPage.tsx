@@ -1,2 +1,2 @@
-export { default } from "../../AnalyticsPage";
+export { default } from "../AnalyticsPage";
 

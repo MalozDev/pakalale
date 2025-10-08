@@ -1,2 +1,2 @@
-export { default } from "../../SettingsPage";
+export { default } from "../SettingsPage";
 

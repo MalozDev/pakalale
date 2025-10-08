@@ -1,2 +1,2 @@
-export { default } from "../../CustomerDashboard";
+export { default } from "../CustomerDashboard";
 

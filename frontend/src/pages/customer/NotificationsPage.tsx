@@ -1,2 +1,2 @@
-export { default } from "../../NotificationsPage";
+export { default } from "../NotificationsPage";
 
