@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import ShopNav from "../components/ShopNav";
+import ShopNav from "../../components/ShopNav";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Store,

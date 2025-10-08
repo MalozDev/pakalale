@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { BarChart3, TrendingUp, PieChart, Eye, ShoppingBag, DollarSign } from "lucide-react";
-import ShopNav from "../components/ShopNav";
+import ShopNav from "../../components/ShopNav";
 
 function AnalyticsPage() {
   return (

@@ -1,5 +1,5 @@
-import ShopNav from "../components/ShopNav";
-import Feed from "../components/Feed";
+import ShopNav from "../../components/ShopNav";
+import Feed from "../../components/Feed";
 
 function FeedPage() {
   return (

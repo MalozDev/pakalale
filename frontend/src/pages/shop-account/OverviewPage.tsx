@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import ShopNav from "../components/ShopNav";
-import { useAuthStore } from "../store/authStore";
+import ShopNav from "../../components/ShopNav";
+import { useAuthStore } from "../../store/authStore";
 import {
   Eye,
   ShoppingBag,

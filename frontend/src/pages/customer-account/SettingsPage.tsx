@@ -16,7 +16,7 @@ import {
   MapPin,
   Save,
 } from "lucide-react";
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from "../../store/authStore";
 
 function SettingsPage() {
   const navigate = useNavigate();
