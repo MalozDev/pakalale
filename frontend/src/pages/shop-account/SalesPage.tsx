@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import ShopNav from "../components/ShopNav";
+import ShopNav from "../../components/ShopNav";
 import {
   TrendingUp,
   DollarSign,

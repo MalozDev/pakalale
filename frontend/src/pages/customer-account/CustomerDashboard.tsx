@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/authStore";
-import Header from "../components/Header";
-import NotificationsModal from "../components/NotificationsModal";
-import ChatModal from "../components/ChatModal";
-import SettingsModal from "../components/SettingsModal";
-import WelcomeSection from "../components/WelcomeSection";
-import Feed from "../components/Feed";
+import { useAuthStore } from "../../store/authStore";
+import Header from "../../components/Header";
+import NotificationsModal from "../../components/NotificationsModal";
+import ChatModal from "../../components/ChatModal";
+import SettingsModal from "../../components/SettingsModal";
+import WelcomeSection from "../../components/WelcomeSection";
+import Feed from "../../components/Feed";
 import {
   TrendingUp,
   Star,

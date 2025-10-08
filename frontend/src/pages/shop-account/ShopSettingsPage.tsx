@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ShopNav from "../components/ShopNav";
+import ShopNav from "../../components/ShopNav";
 import { Settings, MapPin, Phone, Mail, Save, LogOut, Edit2, X } from "lucide-react";
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from "../../store/authStore";
 
 function ShopSettingsPage() {
   const navigate = useNavigate();

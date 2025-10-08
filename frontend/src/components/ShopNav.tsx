@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   MessageSquare,
   Settings,
@@ -11,6 +12,13 @@ import {
 } from "lucide-react";
 
 function ShopNav() {
+  const [messageCount, setMessageCount] = useState(0);
+
+  // Simulate message count - replace with actual API call
+  useEffect(() => {
+    setMessageCount(5); // Sample count
+  }, []);
+
   return (
     <div className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
       <div className="px-4 py-3">
@@ -28,9 +36,9 @@ function ShopNav() {
           {/* Header Actions */}
           <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
             <NavLink
-              to="/shop/messages"
+              to="/shop/chat"
               className={({ isActive }) =>
-                `p-2 rounded-lg transition-colors duration-200 ${
+                `p-2 rounded-lg transition-colors duration-200 relative ${
                   isActive
                     ? "bg-primary-500 text-white"
                     : "text-slate-400 hover:text-slate-300 hover:bg-slate-700"
@@ -38,6 +46,11 @@ function ShopNav() {
               }
             >
               <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
+              {messageCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+                  {messageCount > 9 ? "9+" : messageCount}
+                </span>
+              )}
             </NavLink>
             <NavLink
               to="/shop/analytics"

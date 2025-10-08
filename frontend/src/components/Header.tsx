@@ -7,6 +7,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import AnimatedSearch from "./AnimatedSearch";
 
 interface HeaderProps {
@@ -18,11 +19,19 @@ interface HeaderProps {
 
 function Header({ onSearch, activeTab = "home", onTabChange }: HeaderProps) {
   const navigate = useNavigate();
+  const [messageCount, setMessageCount] = useState(0);
+
+  // Simulate message count - replace with actual API call
+  useEffect(() => {
+    // This would typically come from your chat API
+    setMessageCount(3); // Sample count
+  }, []);
+
   const navigationItems = [
-    { id: "home", label: "Home", icon: Home, count: 0 },
-    { id: "locations", label: "Locations", icon: MapPin, count: 0 },
-    { id: "deals", label: "Deals", icon: MessageSquare, count: 3 },
-    { id: "notifications", label: "Notifications", icon: Bell, count: 5 },
+    { id: "home", label: "Home", icon: Home },
+    { id: "locations", label: "Locations", icon: MapPin },
+    { id: "chat", label: "Chat", icon: MessageSquare, count: messageCount },
+    { id: "notifications", label: "Notifications", icon: Bell },
   ];
 
   return (
@@ -65,10 +74,12 @@ function Header({ onSearch, activeTab = "home", onTabChange }: HeaderProps) {
                 onClick={() => {
                   if (nav.id === "locations") {
                     navigate("/locations");
-                  } else if (nav.id === "deals") {
-                    navigate("/deals");
+                  } else if (nav.id === "chat") {
+                    navigate("/customer/chat");
                   } else if (nav.id === "notifications") {
                     navigate("/notifications");
+                  } else if (nav.id === "home") {
+                    navigate("/customer-dashboard");
                   } else {
                     onTabChange?.(nav.id);
                   }
@@ -81,7 +92,7 @@ function Header({ onSearch, activeTab = "home", onTabChange }: HeaderProps) {
               >
                 <div className="relative">
                   <IconComponent className="h-5 w-5" />
-                  {nav.count > 0 && (
+                  {nav.count && nav.count > 0 && (
                     <span className="absolute -top-3 -right-4 bg-red-deep text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
                       {nav.count > 9 ? "9+" : nav.count}
                     </span>

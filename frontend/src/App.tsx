@@ -12,23 +12,22 @@ import { useAuthStore } from "./store/authStore";
 import LandingPage from "./pages/LandingPage";
 import SignupPage from "./pages/SignupPage";
 import LoginPage from "./pages/LoginPage";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import ShopDashboard from "./pages/ShopDashboard";
-import LocationsPage from "./pages/LocationsPage";
-import LocationDetailPage from "./pages/LocationDetailPage";
-import VirtualShopPage from "./pages/VirtualShopPage";
-import DealsListPage from "./pages/DealsListPage";
-import ChatPage from "./pages/ChatPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import SettingsPage from "./pages/SettingsPage";
-import ShopSettingsPage from "./pages/ShopSettingsPage";
-import ProductsPage from "./pages/ProductsPage";
-import SalesPage from "./pages/SalesPage";
-import OverviewPage from "./pages/OverviewPage";
-import OrdersPage from "./pages/OrdersPage";
-import MessagesPage from "./pages/MessagesPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import FeedPage from "./pages/FeedPage";
+import CustomerDashboard from "./pages/customer-account/CustomerDashboard";
+import ShopDashboard from "./pages/shop-account/ShopDashboard";
+import LocationsPage from "./pages/customer-account/LocationsPage";
+import LocationDetailPage from "./pages/customer-account/LocationDetailPage";
+import VirtualShopPage from "./pages/shop-account/VirtualShopPage";
+import DealsListPage from "./pages/customer-account/DealsListPage";
+import ChatPage from "./pages/shared-pages/ChatPage";
+import NotificationsPage from "./pages/customer-account/NotificationsPage";
+import SettingsPage from "./pages/customer-account/SettingsPage";
+import ShopSettingsPage from "./pages/shop-account/ShopSettingsPage";
+import ProductsPage from "./pages/shop-account/ProductsPage";
+import SalesPage from "./pages/shop-account/SalesPage";
+import OverviewPage from "./pages/shop-account/OverviewPage";
+import OrdersPage from "./pages/shop-account/OrdersPage";
+import AnalyticsPage from "./pages/shop-account/AnalyticsPage";
+import FeedPage from "./pages/shared-pages/FeedPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -165,10 +164,10 @@ function App() {
               }
             />
             <Route
-              path="/shop/messages"
+              path="/shop/chat"
               element={
                 <ProtectedRoute requiredRole="shop_owner">
-                  <MessagesPage />
+                  <ChatPage />
                 </ProtectedRoute>
               }
             />
@@ -242,6 +241,14 @@ function App() {
               path="/chat/:dealId"
               element={
                 <ProtectedRoute>
+                  <ChatPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customer/chat"
+              element={
+                <ProtectedRoute requiredRole="customer">
                   <ChatPage />
                 </ProtectedRoute>
               }

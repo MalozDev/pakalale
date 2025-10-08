@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Filter, Search } from "lucide-react";
-import type { Deal } from "../types/deals";
+import type { Deal } from "../../types/deals";
 
 function DealsListPage() {
   const navigate = useNavigate();
