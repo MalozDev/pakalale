@@ -6,8 +6,6 @@ import {
   DollarSign,
   ShoppingBag,
   Users,
-  Calendar,
-  Filter,
   Download,
   Eye,
   CheckCircle,
