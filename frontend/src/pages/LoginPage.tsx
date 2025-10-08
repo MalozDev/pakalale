@@ -2,13 +2,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff, Mail, Lock, Store, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Store, ArrowRight, User, Building2 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import type { LoginCredentials } from "../types";
 
 function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [accountType, setAccountType] = useState<"customer" | "shop_owner">("customer");
   const navigate = useNavigate();
   const { login } = useAuthStore();
 
@@ -24,20 +25,50 @@ function LoginPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Mock user data - in real app, this would come from API
-      const mockUser = {
-        id: "1",
-        email: data.email,
-        firstName: "John",
-        lastName: "Doe",
-        role: "customer" as const,
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      // Check for specific test credentials
+      if (data.email === "malozdev@gmail.com" && data.password === "12345678") {
+        const mockUser = {
+          id: "1",
+          email: data.email,
+          firstName: "Stephan",
+          lastName: "Malobeka",
+          role: accountType,
+          isVerified: true,
+          location: "Soweto Market",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
 
-      login(mockUser);
-      navigate("/customer-dashboard");
+        login(mockUser);
+        
+        // Navigate based on account type
+        if (accountType === "shop_owner") {
+          navigate("/shop-dashboard");
+        } else {
+          navigate("/customer-dashboard");
+        }
+      } else {
+        // Default mock user for other credentials
+        const mockUser = {
+          id: "1",
+          email: data.email,
+          firstName: "John",
+          lastName: "Doe",
+          role: accountType,
+          isVerified: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        login(mockUser);
+        
+        // Navigate based on account type
+        if (accountType === "shop_owner") {
+          navigate("/shop-dashboard");
+        } else {
+          navigate("/customer-dashboard");
+        }
+      }
     } catch (error) {
       console.error("Login error:", error);
     } finally {
@@ -105,6 +136,43 @@ function LoginPage() {
           </motion.div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Account Type Selection */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                Account Type
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAccountType("customer")}
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-2 ${
+                    accountType === "customer"
+                      ? "border-amber-golden bg-amber-golden/10 text-amber-golden"
+                      : "border-slate-600 bg-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  <User className="h-5 w-5" />
+                  <span className="font-medium">Customer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountType("shop_owner")}
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-2 ${
+                    accountType === "shop_owner"
+                      ? "border-amber-golden bg-amber-golden/10 text-amber-golden"
+                      : "border-slate-600 bg-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  <Building2 className="h-5 w-5" />
+                  <span className="font-medium">Shop Owner</span>
+                </button>
+              </div>
+            </motion.div>
+
             {/* Email Field */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}

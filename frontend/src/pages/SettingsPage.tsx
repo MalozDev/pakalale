@@ -569,27 +569,26 @@ function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-red-dark">
-      {/* Header */}
+      {/* Page Header (match NotificationsPage style) */}
       <div className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center space-x-1 sm:space-x-2 text-slate-400 hover:text-slate-300 transition-colors duration-200"
-            >
-              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="text-sm sm:text-base">Back</span>
-            </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-100">
-              Settings
-            </h1>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-1 sm:space-x-2 text-red-400 hover:text-red-300 transition-colors duration-200"
-            >
-              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="text-sm sm:text-base">Logout</span>
-            </button>
+          <div className="grid grid-cols-3 items-center">
+            <div className="flex">
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center space-x-1 sm:space-x-2 text-slate-400 hover:text-slate-300 transition-colors duration-200"
+              >
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-sm sm:text-base">Back</span>
+              </button>
+            </div>
+            <div className="flex justify-center">
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-amber-golden" />
+                <h1 className="text-base sm:text-lg font-bold text-slate-100">Settings</h1>
+              </div>
+            </div>
+            <div />
           </div>
         </div>
       </div>
@@ -628,6 +627,16 @@ function SettingsPage() {
             <div className="flex-1">
               <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 sm:p-6">
                 {renderContent()}
+              </div>
+              {/* Bottom actions */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm flex items-center space-x-2 transition-colors duration-200"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </button>
               </div>
             </div>
           </div>

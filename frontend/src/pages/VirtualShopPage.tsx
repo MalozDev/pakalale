@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import ShopNav from "../components/ShopNav";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Store,
@@ -7,14 +8,10 @@ import {
   MapPin,
   Phone,
   Mail,
-  Heart,
-  ShoppingBag,
-  ArrowLeft,
   Search,
   Grid,
   List,
-  Share2,
-  MessageCircle,
+  Settings as SettingsIcon,
 } from "lucide-react";
 
 interface Product {
@@ -225,42 +222,18 @@ function VirtualShopPage() {
     console.log("Navigate to product:", productId);
   };
 
-  const handleContactShop = () => {
-    // Open contact modal or navigate to chat
-    console.log("Contact shop");
-  };
-
-  const handleMakeDeal = () => {
-    // Navigate to deals page
-    navigate("/deals");
-  };
+  // Owner view - no customer actions here
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-red-dark">
-      {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center space-x-2 text-slate-400 hover:text-slate-300 transition-colors duration-200"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back</span>
-            </button>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-slate-400 hover:text-slate-300 hover:bg-slate-700 rounded-lg transition-colors duration-200">
-                <Share2 className="h-5 w-5" />
-              </button>
-              <button className="p-2 text-slate-400 hover:text-slate-300 hover:bg-slate-700 rounded-lg transition-colors duration-200">
-                <Heart className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ShopNav />
 
       <div className="container mx-auto px-4 py-6">
+        {/* Page Heading */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-100">My Shop</h1>
+          <p className="text-slate-400">Preview and manage your virtual storefront</p>
+        </div>
         {/* Shop Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -369,21 +342,14 @@ function VirtualShopPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex space-x-2">
+                {/* Edit in Settings */}
+                <div>
                   <button
-                    onClick={handleContactShop}
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-100 py-2 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+                    onClick={() => navigate('/shop/settings')}
+                    className="mt-2 w-full bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
                   >
-                    <MessageCircle className="h-4 w-4" />
-                    <span>Contact</span>
-                  </button>
-                  <button
-                    onClick={handleMakeDeal}
-                    className="flex-1 bg-amber-golden hover:bg-amber-600 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                    <span>Deal</span>
+                    <SettingsIcon className="h-4 w-4" />
+                    <span>Edit in Settings</span>
                   </button>
                 </div>
               </div>
@@ -422,6 +388,12 @@ function VirtualShopPage() {
                 }`}
               >
                 <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigate('/shop/products')}
+                className="ml-2 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-medium"
+              >
+                Manage Products
               </button>
             </div>
           </div>

@@ -21,6 +21,14 @@ import DealsListPage from "./pages/DealsListPage";
 import ChatPage from "./pages/ChatPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
+import ShopSettingsPage from "./pages/ShopSettingsPage";
+import ProductsPage from "./pages/ProductsPage";
+import SalesPage from "./pages/SalesPage";
+import OverviewPage from "./pages/OverviewPage";
+import OrdersPage from "./pages/OrdersPage";
+import MessagesPage from "./pages/MessagesPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import FeedPage from "./pages/FeedPage";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -120,6 +128,79 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="shop_owner">
                   <ShopDashboard />
+                </ProtectedRoute>
+              }
+            />
+            {/* Shop owner sub-pages */}
+            <Route
+              path="/shop/overview"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <OverviewPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/virtual-shop"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <VirtualShopPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/products"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <ProductsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/orders"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <OrdersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/messages"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/analytics"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/feed"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <FeedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/sales"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <SalesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shop/settings"
+              element={
+                <ProtectedRoute requiredRole="shop_owner">
+                  <ShopSettingsPage />
                 </ProtectedRoute>
               }
             />
