@@ -1,538 +1,357 @@
+"use client";
+
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Heart,
-  MessageSquare,
-  Share,
-  ThumbsUp,
-  ShoppingBag,
-  MapPin,
-  Clock,
-  User,
-  Store,
-  Star,
-  CheckCircle,
-  Phone,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Heart, MessageSquare, Share, ShoppingBag, MapPin, Clock, CheckCircle, Phone, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import ContactModal from "./ContactModal";
+import DealModal from "./DealModal";
+import VerifiedBadge from "./VerifiedBadge";
+import { cn } from "@/lib/utils";
+import { type FeedPostData } from "@/hooks/useApi";
 
 interface FeedPostProps {
-  post: {
-    id: string;
-    author: {
-      id: string;
-      name: string;
-      avatar?: string;
-      role: "customer" | "shop_owner";
-      shopName?: string;
-      location?: string;
-      rating?: number;
-    };
-    content: string;
-    images?: string[];
-    location?: string;
-    timestamp: string;
-    likes: number;
-    comments: number;
-    shares: number;
-    isLiked: boolean;
-    isPromotion?: boolean;
-    product?: {
-      id: string;
-      name: string;
-      price: number;
-      originalPrice?: number;
-      discount?: number;
-      image: string;
-      shopId: string;
-    };
-  };
+  post: FeedPostData;
   onLike: (postId: string) => void;
-  onComment: (postId: string) => void;
+  onComment: (postId: string, authorName: string, content: string) => void;
   onShare: (postId: string) => void;
-  onMakeDeal: (productId: string, shopId: string) => void;
-  onContactShop: (shopId: string) => void;
+  onMakeDeal: (productName: string, shopOwnerId: string, dealData: {
+    quantity: number;
+    suggestedPrice: number;
+    message: string;
+  }) => void;
+  onContactShop: (shopOwnerId: string) => void;
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
-function FeedPost({
+export default function FeedPost({
   post,
   onLike,
   onComment,
   onShare,
   onMakeDeal,
   onContactShop,
+  currentUserId,
+  currentUserName,
 }: FeedPostProps) {
+  const router = useRouter();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [imageIndex, setImageIndex] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [comments, setComments] = useState([
-    {
-      id: "1",
-      author: "John Doe",
-      content: "Great deal! Is this still available?",
-      timestamp: "2h ago",
-      avatar: "blue",
-    },
-    {
-      id: "2",
-      author: "Jane Smith",
-      content: "I'm interested! Can you deliver to Kamwala?",
-      timestamp: "1h ago",
-      avatar: "green",
-    },
-  ]);
+  const [showDealModal, setShowDealModal] = useState(false);
+  const [dealSending, setDealSending] = useState(false);
+  const [likeAnimating, setLikeAnimating] = useState(false);
+
+  const isLiked = currentUserId ? (post.likedBy || []).includes(currentUserId) : false;
+  const allComments = post.comments || [];
 
   const handleLike = () => {
+    setLikeAnimating(true);
+    setTimeout(() => setLikeAnimating(false), 400);
     onLike(post.id);
   };
 
-  const handleComment = () => {
-    setShowComments(!showComments);
-    onComment(post.id);
-  };
-
   const handlePostComment = () => {
-    if (newComment.trim()) {
-      // Add new comment to the list
-      const newCommentObj = {
-        id: Date.now().toString(),
-        author: "You",
-        content: newComment.trim(),
-        timestamp: "Just now",
-        avatar: "primary",
-      };
-      setComments((prev) => [...prev, newCommentObj]);
-      setNewComment("");
+    if (!newComment.trim() || !currentUserName) return;
+    onComment(post.id, currentUserName, newComment.trim());
+    setNewComment("");
+  };
+
+  const handleDealSend = async (data: { quantity: number; suggestedPrice: number; message: string }) => {
+    setDealSending(true);
+    try {
+      await onMakeDeal(post.product?.name || post.content.slice(0, 50), post.author!.id, data);
+      setShowDealModal(false);
+    } finally {
+      setDealSending(false);
     }
-  };
-
-  const handleShare = () => {
-    onShare(post.id);
-  };
-
-  const handleMakeDeal = () => {
-    if (post.product) {
-      onMakeDeal(post.product.id, post.author.id);
-    }
-  };
-
-  const handleContactShop = () => {
-    setShowContactModal(true);
   };
 
   const formatTime = (timestamp: string) => {
     const now = new Date();
     const postTime = new Date(timestamp);
-    const diffInHours = Math.floor(
-      (now.getTime() - postTime.getTime()) / (1000 * 60 * 60)
-    );
-
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    return postTime.toLocaleDateString();
+    const diff = Math.floor((now.getTime() - postTime.getTime()) / (1000 * 60 * 60));
+    if (diff < 1) return "Just now";
+    if (diff < 24) return `${diff}h ago`;
+    return `${Math.floor(diff / 24)}d ago`;
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"
-    >
-      {/* Post Header */}
-      <div className="p-3 sm:p-4 border-b border-slate-700">
-        <div className="flex items-start space-x-2 sm:space-x-3">
-          {/* Avatar - Clickable */}
-          <button
+    <Card className="bg-card border-border overflow-hidden">
+      {/* Header */}
+      <div className="p-3 sm:p-4 border-b border-border">
+        <div className="flex items-start gap-2.5">
+          <div
+            className="relative shrink-0 cursor-pointer"
             onClick={() => {
-              if (post.author.role === "shop_owner") {
-                window.location.href = `/shop/${post.author.id}`;
+              if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
+                router.push(`/customer/locations/${post.author.shopLocationId}`);
               }
             }}
-            className="relative hover:opacity-80 transition-opacity duration-200"
           >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-amber-golden to-red-deep rounded-full flex items-center justify-center">
-              {post.author.avatar ? (
-                <img
-                  src={post.author.avatar}
-                  alt={post.author.name}
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-white font-medium text-sm sm:text-lg">
-                  {post.author.name.charAt(0)}
-                </span>
-              )}
-            </div>
-            {post.author.role === "shop_owner" && (
-              <div className="absolute -top-0 -left-0 bg-blue-500 p-1 rounded-full">
-                <Store className="h-3 w-3 text-white" />
-              </div>
-            )}
-          </button>
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={post.author?.avatar} alt={post.author?.name} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-amber-golden text-primary-foreground text-sm">
+                {post.author?.name?.charAt(0) || "?"}
+              </AvatarFallback>
+            </Avatar>
+          </div>
 
-          {/* Author Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-1 flex-wrap">
-              <button
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3
+                className="font-semibold text-sm truncate cursor-pointer hover:underline"
                 onClick={() => {
-                  if (post.author.role === "shop_owner") {
-                    window.location.href = `/shop/${post.author.id}`;
+                  if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
+                    router.push(`/customer/locations/${post.author.shopLocationId}`);
                   }
                 }}
-                className="hover:opacity-80 transition-opacity duration-200 flex-shrink-0"
               >
-                <h3 className="font-semibold text-slate-100 truncate text-sm sm:text-base">
-                  {post.author.name}
-                </h3>
-              </button>
-              {post.author.role === "shop_owner" && (
-                <div className="flex items-center space-x-1 flex-shrink-0">
-                  <span className="px-1.5 py-0.5 bg-amber-golden/20 text-amber-golden text-xs rounded-full">
-                    Shop
-                  </span>
-                  <CheckCircle className="h-3 w-3 text-green-400" />
-                </div>
+                {post.author?.name || "Unknown"}
+              </h3>
+              {post.author?.role === "shop_owner" && (
+                <Badge variant="secondary" className="text-[10px] h-5 bg-primary/10 text-primary">Shop</Badge>
               )}
-              {post.isPromotion && (
-                <span className="px-1.5 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded-full flex-shrink-0">
-                  Promo
-                </span>
+              {post.author?.isShopVerified && (
+                <VerifiedBadge size="sm" />
               )}
             </div>
-
-            <div className="flex items-center space-x-1 text-xs sm:text-sm text-slate-400 flex-wrap">
-              <div className="flex items-center space-x-1">
-                <Clock className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{formatTime(post.timestamp)}</span>
-              </div>
-              {post.location && (
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span>{formatTime(post.createdAt)}</span>
+              {post.locationId && (
                 <>
-                  <span className="hidden sm:inline">•</span>
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="h-3 w-3 flex-shrink-0" />
-                    <span className="truncate">{post.location}</span>
-                  </div>
+                  <span className="hidden sm:inline">·</span>
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{post.locationId}</span>
                 </>
               )}
             </div>
-
-            {/* Shop Rating for Shop Owners */}
-            {post.author.role === "shop_owner" && post.author.rating && (
-              <div className="flex items-center space-x-1 mt-1">
-                <Star className="h-3 w-3 text-yellow-400 fill-current flex-shrink-0" />
-                <span className="text-xs text-slate-400 truncate">
-                  {post.author.rating} ({post.author.shopName})
-                </span>
-              </div>
-            )}
           </div>
-        </div>
-      </div>
 
-      {/* Post Content */}
-      <div className="p-3 sm:p-4">
-        <p className="text-slate-100 leading-relaxed mb-3 sm:mb-4 text-sm sm:text-base">
-          {post.content}
-        </p>
-
-        {/* Product Card (if it's a product post) */}
-        {post.product && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-slate-700/50 rounded-lg p-4 border border-slate-600 mb-4"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center">
-                <ShoppingBag className="h-8 w-8 text-slate-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-slate-100">
-                  {post.product.name}
-                </h4>
-                <div className="flex items-center space-x-2 mt-1">
-                  <span className="text-lg font-bold text-primary-500">
-                    K{post.product.price}
-                  </span>
-                  {post.product.originalPrice && (
-                    <span className="text-sm text-slate-400 line-through">
-                      K{post.product.originalPrice}
-                    </span>
-                  )}
-                  {post.product.discount && (
-                    <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">
-                      -{post.product.discount}%
-                    </span>
-                  )}
-                </div>
-              </div>
+          {/* Promo badge top-right */}
+          {post.isPromotion && (
+            <div className="flex items-center gap-1 shrink-0 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+              <span className="text-sm animate-fire animate-fire-glow">🔥</span>
+              <span className="text-[10px] font-semibold text-emerald-500">Promo</span>
             </div>
-          </motion.div>
-        )}
-
-        {/* Images */}
-        {post.images && post.images.length > 0 && (
-          <div className="mb-4">
-            {post.images.length === 1 ? (
-              <div className="relative">
-                <img
-                  src={post.images[0]}
-                  alt="Post image"
-                  className="w-full h-64 object-cover rounded-lg"
-                />
-              </div>
-            ) : (
-              <div className="relative">
-                <img
-                  src={post.images[imageIndex]}
-                  alt="Post image"
-                  className="w-full h-64 object-cover rounded-lg"
-                />
-                {post.images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() =>
-                        setImageIndex(
-                          imageIndex > 0
-                            ? imageIndex - 1
-                            : (post.images?.length || 1) - 1
-                        )
-                      }
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors duration-200"
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={() =>
-                        setImageIndex(
-                          imageIndex < (post.images?.length || 1) - 1
-                            ? imageIndex + 1
-                            : 0
-                        )
-                      }
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors duration-200"
-                    >
-                      →
-                    </button>
-                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                      {post.images?.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setImageIndex(index)}
-                          className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-                            index === imageIndex ? "bg-white" : "bg-white/50"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Engagement Stats */}
-      <div className="px-4 py-2 border-t border-slate-700">
-        <div className="flex items-center justify-between text-sm text-slate-400">
-          <div className="flex items-center space-x-4">
-            {post.likes > 0 && (
-              <div className="flex items-center space-x-1">
-                <ThumbsUp className="h-4 w-4 text-blue-400" />
-                <span>{post.likes}</span>
-              </div>
-            )}
-            {post.comments > 0 && <span>{post.comments} comments</span>}
-            {post.shares > 0 && <span>{post.shares} shares</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="px-3 sm:px-4 py-2 border-t border-slate-700">
-        <div className="flex items-center justify-between gap-1 flex-wrap">
-          {/* Like Button */}
-          <button
-            onClick={handleLike}
-            className={`flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg transition-colors duration-200 flex-1 justify-center min-w-0 ${
-              post.isLiked
-                ? "text-red-400 hover:bg-red-500/10"
-                : "text-slate-400 hover:text-red-400 hover:bg-red-500/10"
-            }`}
-          >
-            <Heart
-              className={`h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 ${
-                post.isLiked ? "fill-current" : ""
-              }`}
-            />
-            <span className="text-xs sm:text-sm font-medium truncate">
-              Like
-            </span>
-          </button>
-
-          {/* Comment Button */}
-          <button
-            onClick={handleComment}
-            className="flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors duration-200 flex-1 justify-center min-w-0"
-          >
-            <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium truncate">
-              Comment
-            </span>
-          </button>
-
-          {/* Share Button */}
-          <button
-            onClick={handleShare}
-            className="flex items-center space-x-1 px-2 sm:px-3 py-2 rounded-lg text-slate-400 hover:text-green-400 hover:bg-green-500/10 transition-colors duration-200 flex-1 justify-center min-w-0"
-          >
-            <Share className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium truncate">
-              Share
-            </span>
-          </button>
-
-          {/* Contact Button - Always Visible */}
-          <button
-            onClick={handleContactShop}
-            className="flex items-center space-x-1 px-2 sm:px-3 py-2 text-slate-400 hover:text-teal-dark hover:bg-teal-dark/10 rounded-lg transition-colors duration-200 flex-1 justify-center min-w-0"
-            title="Contact"
-          >
-            <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-medium truncate">
-              Contact
-            </span>
-          </button>
-
-          {/* Deal Button - Only for Shop Owners with Products */}
-          {post.author.role === "shop_owner" && post.product && (
-            <button
-              onClick={handleMakeDeal}
-              className="bg-amber-golden hover:bg-amber-600 text-white px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 flex items-center space-x-1 flex-1 justify-center min-w-0"
-            >
-              <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="text-xs sm:text-sm font-medium truncate">
-                Deal
-              </span>
-            </button>
           )}
         </div>
       </div>
 
-      {/* Comments Section */}
-      <AnimatePresence>
-        {showComments && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="border-t border-slate-700"
-          >
-            <div className="p-3 sm:p-4">
-              {/* Comment Input */}
-              <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1 flex items-center space-x-2 min-w-0">
-                  <input
-                    type="text"
-                    placeholder="Write a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handlePostComment();
-                      }
-                    }}
-                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm sm:text-base min-w-0"
-                  />
-                  <button
-                    onClick={handlePostComment}
-                    disabled={!newComment.trim()}
-                    className="bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 flex-shrink-0"
-                  >
-                    Post
-                  </button>
-                </div>
-              </div>
+      {/* Content */}
+      <div className="p-3 sm:p-4">
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
 
-              {/* Comments List */}
-              <div className="space-y-3">
-                {comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="flex items-start space-x-2 sm:space-x-3"
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        comment.avatar === "blue"
-                          ? "bg-gradient-to-r from-blue-500 to-blue-600"
-                          : comment.avatar === "green"
-                          ? "bg-gradient-to-r from-green-500 to-green-600"
-                          : "bg-gradient-to-r from-primary-500 to-primary-600"
-                      }`}
-                    >
-                      <User className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="bg-slate-700 rounded-lg p-3">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="font-medium text-slate-100 text-sm">
-                            {comment.author}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {comment.timestamp}
-                          </span>
-                        </div>
-                        <p className="text-slate-300 text-sm break-words">
-                          {comment.content}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        {post.product && (
+          <div className="mt-3 bg-muted/50 rounded-lg p-3 border border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 bg-muted rounded-lg flex items-center justify-center shrink-0">
+                <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-sm truncate">{post.product.name}</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-lg font-bold text-primary">K{post.product.price.toLocaleString()}</span>
+                  {post.product.originalPrice && (
+                    <span className="text-xs text-muted-foreground line-through">K{post.product.originalPrice.toLocaleString()}</span>
+                  )}
+                  {post.product.discount && (
+                    <Badge variant="secondary" className="text-[10px] bg-rose-500/10 text-rose-400">
+                      -{post.product.discount}%
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
 
-      {/* Contact Modal */}
+        {post.images && post.images.length > 0 && (
+          <div className="mt-3">
+            {post.images.length === 1 ? (
+              <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden">
+                <img src={post.images[0]} alt="Post image" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden">
+                  <img src={post.images[imageIndex]} alt="Post image" className="w-full h-full object-cover" />
+                </div>
+                <div className="absolute inset-x-0 bottom-2 flex justify-center gap-1">
+                  {post.images.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setImageIndex(i)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-colors",
+                        i === imageIndex ? "bg-white" : "bg-white/50"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      {(post.likes > 0 || allComments.length > 0 || post.shares > 0) && (
+        <div className="px-4 py-1 border-t border-border">
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            {post.likes > 0 && (
+              <span className="flex items-center gap-1">
+                <Heart className="h-3 w-3 text-blue-400" /> {post.likes}
+              </span>
+            )}
+            {allComments.length > 0 && <span>{allComments.length} comments</span>}
+            {post.shares > 0 && <span>{post.shares} shares</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-3 sm:px-4 py-1.5 border-t border-border">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 text-[10px] sm:text-[11px] transition-all px-1.5 sm:px-2",
+              isLiked ? "text-rose-400 hover:text-rose-500" : "text-muted-foreground"
+            )}
+            onClick={handleLike}
+          >
+            <Heart
+              className={cn(
+                "h-3.5 w-3.5 mr-0.5 transition-transform",
+                isLiked && "fill-current",
+                likeAnimating && "animate-like-pop"
+              )}
+            />
+            Like
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-[10px] sm:text-[11px] text-muted-foreground px-1.5 sm:px-2"
+            onClick={() => setShowComments(!showComments)}
+          >
+            <MessageSquare className="h-3.5 w-3.5 mr-0.5" />
+            Comment
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-[10px] sm:text-[11px] text-muted-foreground px-1.5 sm:px-2"
+            onClick={() => onShare(post.id)}
+          >
+            <Share className="h-3.5 w-3.5 mr-0.5" />
+            Share
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-[10px] sm:text-[11px] text-muted-foreground px-1.5 sm:px-2"
+            onClick={() => setShowContactModal(true)}
+          >
+            <Phone className="h-3.5 w-3.5 mr-0.5" />
+            Contact
+          </Button>
+          {post.author?.role === "shop_owner" && (
+            <Button
+              size="sm"
+              className="h-7 text-[10px] sm:text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 px-1.5 sm:px-2"
+              onClick={() => setShowDealModal(true)}
+            >
+              <ShoppingBag className="h-3.5 w-3.5 mr-0.5" />
+              Deal
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Comments */}
+      {showComments && (
+        <div className="border-t border-border p-3 sm:p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              placeholder="Write a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handlePostComment();
+                }
+              }}
+              className="flex-1 h-8 text-sm"
+            />
+            <Button
+              size="sm"
+              className="h-8 bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={!newComment.trim()}
+              onClick={handlePostComment}
+            >
+              Post
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {allComments.map((comment, i) => (
+              <div key={i} className="flex items-start gap-2 animate-slide-in">
+                <Avatar className="h-7 w-7 shrink-0">
+                  <AvatarFallback className="bg-primary text-white text-[10px]">
+                    {comment.authorName?.[0] || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="bg-muted rounded-lg p-2.5">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-medium">{comment.authorName || "User"}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {comment.createdAt ? formatTime(comment.createdAt) : ""}
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed break-words">{comment.content}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <ContactModal
         isOpen={showContactModal}
         onClose={() => setShowContactModal(false)}
         contact={{
-          id: post.author.id,
-          name: post.author.name,
-          role: post.author.role,
-          location: post.author.location,
-          shopName: post.author.shopName,
-          rating: post.author.rating,
-          phone: "+260 97 123 4567",
-          email: `${post.author.name
-            .toLowerCase()
-            .replace(" ", ".")}@pakalale.com`,
-          joinDate: "Jan 2024",
-          totalPosts: 15,
-          verified: true,
+          id: post.author?.id || "",
+          name: post.author?.name || "Unknown",
+          role: post.author?.role || "customer",
         }}
-        onMessageClick={() => {
-          setShowContactModal(false);
-          onContactShop(post.author.id);
-        }}
-        onDealClick={() => {
-          setShowContactModal(false);
-          handleMakeDeal();
-        }}
+        onMessageClick={() => { setShowContactModal(false); onContactShop(post.author?.id || ""); }}
+        onDealClick={() => { setShowContactModal(false); setShowDealModal(true); }}
       />
-    </motion.div>
+
+      {/* Deal Modal */}
+      <DealModal
+        isOpen={showDealModal}
+        onClose={() => setShowDealModal(false)}
+        productName={post.product?.name || post.content.slice(0, 50)}
+        productPrice={post.product?.price}
+        shopName={post.author?.name}
+        onSendDeal={handleDealSend}
+        sending={dealSending}
+      />
+    </Card>
   );
 }
-
-export default FeedPost;

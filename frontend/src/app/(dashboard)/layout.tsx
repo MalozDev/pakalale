@@ -1,0 +1,63 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import BottomNav from "@/components/BottomNav";
+import { Loader2 } from "lucide-react";
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { user, isAuthenticated, hasCheckedSession, validateSession } = useAuthStore();
+  const pathname = usePathname();
+  const router = useRouter();
+  const hasRunValidation = useRef(false);
+
+  // Validate session once on first mount
+  useEffect(() => {
+    if (!hasRunValidation.current) {
+      hasRunValidation.current = true;
+      validateSession();
+    }
+  }, [validateSession]);
+
+  // Redirect to login if not authenticated after session check
+  useEffect(() => {
+    if (hasCheckedSession && !isAuthenticated) {
+      // Store the intended destination for redirect back after login
+      sessionStorage.setItem("redirectAfterLogin", pathname);
+      router.replace("/login");
+    }
+  }, [hasCheckedSession, isAuthenticated, pathname, router]);
+
+  // Show loading while checking session
+  if (!hasCheckedSession) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render children if not authenticated
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+
+  const isCustomer = pathname.startsWith("/customer");
+
+  return (
+    <div className="min-h-screen bg-background">
+      <main className={isCustomer ? "pb-16 sm:pb-0" : ""}>
+        {children}
+      </main>
+      {isCustomer && <BottomNav />}
+    </div>
+  );
+}

@@ -7,6 +7,8 @@ export interface User {
   role: "customer" | "shop_owner" | "admin";
   isVerified: boolean;
   location?: string;
+  phone?: string;
+  bio?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,7 +43,7 @@ export interface Shop {
   name: string;
   description: string;
   ownerId: string;
-  locationId: string;
+  locationId?: string;
   status: "pending" | "verified" | "rejected";
   contact: {
     phone: string;
@@ -51,7 +53,10 @@ export interface Shop {
   hours: {
     [key: string]: { open: string; close: string; closed: boolean };
   };
+  coverImage?: string;
+  profileImage?: string;
   images: string[];
+  specialties: string[];
   rating?: number;
   totalReviews: number;
   createdAt: string;
@@ -63,16 +68,21 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
+  discount?: number;
   images: string[];
   category: string;
   stock: number;
   isAvailable: boolean;
   shopId: string;
+  views: number;
+  rating: number;
+  reviews: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface FeedPost {
+export interface FeedPostType {
   id: string;
   content: string;
   images?: string[];
@@ -82,6 +92,17 @@ export interface FeedPost {
   location?: Location;
   likes: number;
   comments: number;
+  shares: number;
+  isPromotion: boolean;
+  product?: {
+    id: string;
+    name: string;
+    price: number;
+    originalPrice?: number;
+    discount?: number;
+    image: string;
+    shopId: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -100,13 +121,7 @@ export interface Order {
   customerId: string;
   shopId: string;
   items: OrderItem[];
-  status:
-    | "pending"
-    | "confirmed"
-    | "preparing"
-    | "ready"
-    | "completed"
-    | "cancelled";
+  status: "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
   total: number;
   notes?: string;
   createdAt: string;

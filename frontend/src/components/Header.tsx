@@ -1,111 +1,123 @@
-import {
-  Store,
-  Bell,
-  Home,
-  MapPin,
-  MessageSquare,
-  Settings,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
+"use client";
+
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Store, Bell, Home, MapPin, MessageSquare, Settings, Menu, ShoppingBag, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import AnimatedSearch from "./AnimatedSearch";
+import { useDealStore } from "@/store/dealStore";
+import { useNotificationStore } from "@/store/notificationStore";
+import { cn } from "@/lib/utils";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
-  onNotificationsClick?: () => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  userId?: string;
+  showBack?: boolean;
+  title?: string;
 }
 
-function Header({ onSearch, activeTab = "home", onTabChange }: HeaderProps) {
-  const navigate = useNavigate();
-  const [messageCount, setMessageCount] = useState(0);
+export default function Header({ onSearch, activeTab = "home", onTabChange, userId, showBack, title }: HeaderProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const dealCount = useDealStore((s) => s.dealCount);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
 
-  // Simulate message count - replace with actual API call
+  // Fetch and poll notifications
   useEffect(() => {
-    // This would typically come from your chat API
-    setMessageCount(3); // Sample count
-  }, []);
+    if (!userId) return;
+    const fetchCounts = () => {
+      fetch(`/api/notifications?userId=${userId}`)
+        .then((r) => r.json())
+        .then((data) => setUnreadCount(data.unreadCount || 0))
+        .catch(() => {});
+      fetch(`/api/chat?userId=${userId}`)
+        .then((r) => r.json())
+        .then((data) => setChatUnreadCount(data.totalUnread || 0))
+        .catch(() => {});
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, [userId, setUnreadCount]);
 
-  const navigationItems = [
-    { id: "home", label: "Home", icon: Home },
-    { id: "locations", label: "Locations", icon: MapPin },
-    { id: "chat", label: "Chat", icon: MessageSquare, count: messageCount },
-    { id: "notifications", label: "Notifications", icon: Bell },
+  const navItems = [
+    { id: "home", label: "Home", icon: Home, href: "/customer" },
+    { id: "locations", label: "Shops", icon: MapPin, href: "/customer/locations" },
+    { id: "deals", label: "Deals", icon: ShoppingBag, href: "/customer/deals", count: dealCount },
+    { id: "chat", label: "Chat", icon: MessageSquare, href: "/customer/chat", count: chatUnreadCount },
+    { id: "notifications", label: "Alerts", icon: Bell, href: "/customer/notifications", count: unreadCount },
   ];
 
   return (
-    <div className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-      {/* Top Row - Logo, Search, Settings */}
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between space-x-3">
-          {/* Logo */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            <div className="bg-gradient-to-r from-amber-golden to-red-deep p-2 rounded-lg">
-              <Store className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-slate-100">Pakalale</span>
+    <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
+      {/* Top bar */}
+      <div className="flex items-center gap-3 px-4 h-14">
+        {showBack ? (
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        ) : (
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="bg-primary p-1.5 rounded-lg"><Store className="h-4 w-4 text-primary-foreground" /></div>
+            <span className="text-lg font-bold hidden sm:inline">Pakalale</span>
           </div>
+        )}
 
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md">
-            <AnimatedSearch onSearch={onSearch} />
-          </div>
+        {title ? (
+          <h1 className="text-sm font-bold flex-1 text-center">{title}</h1>
+        ) : (
+          <div className="flex-1 max-w-md"><AnimatedSearch onSearch={onSearch} /></div>
+        )}
 
-          {/* Settings */}
-          <button
-            onClick={() => navigate("/settings")}
-            className="p-2 text-slate-400 hover:text-slate-300 hover:bg-slate-700 rounded-lg transition-colors duration-200 flex-shrink-0"
-          >
-            <Settings className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
+        <Button variant="ghost" size="icon" onClick={() => router.push("/customer/settings")} className="shrink-0">
+          <Settings className="h-5 w-5" />
+        </Button>
 
-      {/* Bottom Row - Navigation */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center justify-center space-x-4">
-          {navigationItems.map((nav) => {
-            const IconComponent = nav.icon;
-            const isActive = activeTab === nav.id;
-            return (
-              <button
-                key={nav.id}
-                onClick={() => {
-                  if (nav.id === "locations") {
-                    navigate("/locations");
-                  } else if (nav.id === "chat") {
-                    navigate("/customer/chat");
-                  } else if (nav.id === "notifications") {
-                    navigate("/notifications");
-                  } else if (nav.id === "home") {
-                    navigate("/customer-dashboard");
-                  } else {
-                    onTabChange?.(nav.id);
-                  }
-                }}
-                className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-colors duration-200 relative ${
-                  isActive
-                    ? "text-amber-golden bg-amber-golden/10"
-                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700"
-                }`}
-              >
-                <div className="relative">
-                  <IconComponent className="h-5 w-5" />
-                  {nav.count && nav.count > 0 && (
-                    <span className="absolute -top-3 -right-4 bg-red-deep text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
-                      {nav.count > 9 ? "9+" : nav.count}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs font-medium">{nav.label}</span>
+        {/* Mobile menu */}
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger render={<Button variant="ghost" size="icon" className="sm:hidden shrink-0" />}>
+            <Menu className="h-5 w-5" />
+          </SheetTrigger>
+          <SheetContent side="right" className="w-72 p-0">
+            <SheetTitle className="px-4 py-4 border-b border-border text-left">Menu</SheetTitle>
+            <nav className="p-4 space-y-1">
+              {navItems.map((item) => (
+                <button key={item.id} onClick={() => { router.push(item.href); setOpen(false); }}
+                  className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors", activeTab === item.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
+                  <item.icon className="h-5 w-5" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {item.count && item.count > 0 && <Badge className="bg-pink-500 text-white h-5 min-w-[20px] text-[10px] border-0 font-bold rounded-full">{item.count > 9 ? "9+" : item.count}</Badge>}
+                </button>
+              ))}
+              <div className="border-t border-border my-3" />
+              <button onClick={() => { router.push("/customer/settings"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                <Settings className="h-5 w-5" /><span className="flex-1 text-left">Settings</span>
               </button>
-            );
-          })}
-        </div>
+            </nav>
+          </SheetContent>
+        </Sheet>
       </div>
-    </div>
+
+      {/* Desktop nav */}
+      <div className="hidden sm:flex items-center justify-center gap-1 px-4 pb-2">
+        {navItems.map((item) => (
+          <button key={item.id} onClick={() => router.push(item.href)}
+            className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors relative", activeTab === item.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
+            <item.icon className="h-4 w-4" />
+            <span>{item.label}</span>
+            {item.count && item.count > 0 && (
+              <span className="ml-1 bg-pink-500 text-white text-[9px] rounded-full h-3.5 min-w-[14px] flex items-center justify-center px-0.5 font-bold">{item.count > 9 ? "9+" : item.count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    </header>
   );
 }
-
-export default Header;

@@ -1,4 +1,7 @@
-import { NavLink } from "react-router-dom";
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
   MessageSquare,
@@ -7,114 +10,163 @@ import {
   Home,
   Package,
   ShoppingBag,
-  BarChart3,
   DollarSign,
+  BarChart3,
+  Menu,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
-function ShopNav() {
-  const [messageCount, setMessageCount] = useState(0);
+type NavItem = { to: string; label: string; icon: React.ElementType; count?: number };
 
-  // Simulate message count - replace with actual API call
-  useEffect(() => {
-    setMessageCount(5); // Sample count
-  }, []);
-
-  return (
-    <div className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between">
-          {/* Logo - Single line on mobile */}
-          <div className="flex items-center space-x-2 min-w-0 flex-1">
-            <div className="bg-primary-500 p-2 rounded-lg flex-shrink-0">
-              <Store className="h-5 w-5 md:h-6 md:w-6 text-white" />
-            </div>
-            <span className="text-lg md:text-xl font-bold text-slate-100 truncate">
-              Pakalale Shop
-            </span>
-          </div>
-
-          {/* Header Actions */}
-          <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
-            <NavLink
-              to="/shop/chat"
-              className={({ isActive }) =>
-                `p-2 rounded-lg transition-colors duration-200 relative ${
-                  isActive
-                    ? "bg-primary-500 text-white"
-                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700"
-                }`
-              }
-            >
-              <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
-              {messageCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
-                  {messageCount > 9 ? "9+" : messageCount}
-                </span>
-              )}
-            </NavLink>
-            <NavLink
-              to="/shop/analytics"
-              className={({ isActive }) =>
-                `p-2 rounded-lg transition-colors duration-200 ${
-                  isActive
-                    ? "bg-primary-500 text-white"
-                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700"
-                }`
-              }
-            >
-              <BarChart3 className="h-4 w-4 md:h-5 md:w-5" />
-            </NavLink>
-            <NavLink
-              to="/shop/settings"
-              className={({ isActive }) =>
-                `p-2 rounded-lg transition-colors duration-200 ${
-                  isActive
-                    ? "bg-primary-500 text-white"
-                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700"
-                }`
-              }
-            >
-              <Settings className="h-4 w-4 md:h-5 md:w-5" />
-            </NavLink>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="px-4 pb-3">
-        <div className="flex space-x-1 overflow-x-auto">
-          {[
-            { to: "/shop/overview", label: "Overview", icon: Home },
-            { to: "/shop/virtual-shop", label: "Virtual Shop", icon: Store },
-            { to: "/shop/products", label: "Products", icon: Package },
-            { to: "/shop/orders", label: "Orders", icon: ShoppingBag },
-            { to: "/shop/sales", label: "Sales", icon: DollarSign },
-            { to: "/shop/feed", label: "Feed", icon: MessageSquare },
-          ].map((tab) => {
-            const IconComponent = tab.icon;
-            return (
-              <NavLink
-                key={tab.to}
-                to={tab.to}
-                className={({ isActive }) =>
-                  `flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 whitespace-nowrap ${
-                    isActive
-                      ? "bg-primary-500 text-white"
-                      : "text-slate-400 hover:text-slate-300 hover:bg-slate-700"
-                  }`
-                }
-                end
-              >
-                <IconComponent className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </NavLink>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
+interface ShopNavProps {
+  userId?: string;
 }
 
-export default ShopNav;
+export default function ShopNav({ userId }: ShopNavProps) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState(0);
 
+  useEffect(() => {
+    if (!userId) return;
+    // Fetch pending order count for this shop owner
+    fetch(`/api/analytics?shopId=${userId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setPendingOrders(data.ordersByStatus?.pending || 0);
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  const navTabs: NavItem[] = [
+    { to: "/shop/overview", label: "Overview", icon: Home },
+    { to: "/shop/virtual-shop", label: "My Shop", icon: Store },
+    { to: "/shop/products", label: "Products", icon: Package },
+    { to: "/shop/orders", label: "Orders", icon: ShoppingBag, count: pendingOrders },
+    { to: "/shop/sales", label: "Sales", icon: DollarSign },
+    { to: "/shop/feed", label: "Feed", icon: MessageSquare },
+  ];
+
+  const secondaryLinks: NavItem[] = [
+    { to: "/shop/chat", label: "Chat", icon: MessageSquare },
+    { to: "/shop/analytics", label: "Analytics", icon: BarChart3 },
+    { to: "/shop/settings", label: "Settings", icon: Settings },
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 h-14">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="bg-primary p-1.5 rounded-lg shrink-0">
+            <Store className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span className="text-lg font-bold truncate">Pakalale Shop</span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {secondaryLinks.map((link) => (
+            <Link
+              key={link.to}
+              href={link.to}
+              className={cn(
+                "p-2 rounded-lg transition-colors relative",
+                pathname === link.to
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              )}
+            >
+              <link.icon className="h-4 w-4" />
+              {link.count && link.count > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                  {link.count > 9 ? "9+" : link.count}
+                </span>
+              )}
+            </Link>
+          ))}
+
+          {/* Mobile menu */}
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger render={<Button variant="ghost" size="icon" className="sm:hidden" />}>
+              <Menu className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="right" className="w-64 p-0">
+              <SheetTitle className="px-4 py-4 border-b border-border text-left">
+                Navigation
+              </SheetTitle>
+              <nav className="p-3 space-y-1">
+                {[...navTabs, ...secondaryLinks].map((link) => (
+                  <Link
+                    key={link.to}
+                    href={link.to}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      pathname === link.to
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <link.icon className="h-5 w-5" />
+                    <span className="flex-1">{link.label}</span>
+                    {link.count && link.count > 0 && (
+                      <Badge className="bg-primary text-primary-foreground h-5 min-w-[20px] text-xs">
+                        {link.count}
+                      </Badge>
+                    )}
+                  </Link>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+
+      {/* Desktop tabs */}
+      <div className="hidden sm:flex items-center gap-1 px-4 pb-2 overflow-x-auto scrollbar-none">
+        {navTabs.map((tab) => (
+          <Link
+            key={tab.to}
+            href={tab.to}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+              pathname === tab.to
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            <tab.icon className="h-4 w-4" />
+            <span>{tab.label}</span>
+            {tab.count && tab.count > 0 && (
+              <Badge className="bg-destructive text-destructive-foreground text-[9px] h-4 min-w-[16px] justify-center px-1 ml-1">
+                {tab.count}
+              </Badge>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {/* Mobile scrollable tabs */}
+      <div className="flex sm:hidden items-center gap-1 px-4 pb-2 overflow-x-auto scrollbar-none">
+        {navTabs.map((tab) => (
+          <Link
+            key={tab.to}
+            href={tab.to}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0",
+              pathname === tab.to
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            <tab.icon className="h-3.5 w-3.5" />
+            <span>{tab.label}</span>
+          </Link>
+        ))}
+      </div>
+    </header>
+  );
+}

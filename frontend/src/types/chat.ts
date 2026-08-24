@@ -34,7 +34,7 @@ export interface Message {
   senderName: string;
   senderRole: "customer" | "shop_owner";
   content: string;
-  type: "text" | "image" | "file" | "deal_update" | "system";
+  type: "text" | "image" | "file" | "voice" | "deal_update" | "system";
   timestamp: string;
   isRead: boolean;
   readBy: string[];

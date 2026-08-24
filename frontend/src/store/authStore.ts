@@ -1,15 +1,19 @@
+"use client";
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "../types";
+import type { User } from "@/types";
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  hasCheckedSession: boolean;
   login: (user: User) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
-  updateUser: (user: Partial<User>) => void;
+  updateUser: (userData: Partial<User>) => void;
+  validateSession: () => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -17,14 +21,15 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
-      isLoading: false,
+      isLoading: true,
+      hasCheckedSession: false,
 
       login: (user: User) => {
-        set({ user, isAuthenticated: true, isLoading: false });
+        set({ user, isAuthenticated: true, isLoading: false, hasCheckedSession: true });
       },
 
       logout: () => {
-        set({ user: null, isAuthenticated: false, isLoading: false });
+        set({ user: null, isAuthenticated: false, isLoading: false, hasCheckedSession: true });
       },
 
       setLoading: (loading: boolean) => {
@@ -35,6 +40,39 @@ export const useAuthStore = create<AuthState>()(
         const currentUser = get().user;
         if (currentUser) {
           set({ user: { ...currentUser, ...userData } });
+        }
+      },
+
+      // Validate session against the database
+      validateSession: async () => {
+        const state = get();
+        if (!state.user?.id) {
+          set({ isAuthenticated: false, isLoading: false, hasCheckedSession: true });
+          return false;
+        }
+
+        try {
+          const res = await fetch(`/api/user/profile?userId=${state.user.id}`);
+          if (!res.ok) {
+            // User no longer exists (e.g., DB was re-seeded) — clear stale session
+            set({ user: null, isAuthenticated: false, isLoading: false, hasCheckedSession: true });
+            return false;
+          }
+          const data = await res.json();
+          if (data.user) {
+            set({ user: { ...state.user, ...data.user }, isAuthenticated: true, isLoading: false, hasCheckedSession: true });
+            return true;
+          }
+          set({ user: null, isAuthenticated: false, isLoading: false, hasCheckedSession: true });
+          return false;
+        } catch {
+          // Network error — keep existing session if we have one
+          if (state.user) {
+            set({ isAuthenticated: true, isLoading: false, hasCheckedSession: true });
+          } else {
+            set({ isAuthenticated: false, isLoading: false, hasCheckedSession: true });
+          }
+          return true;
         }
       },
     }),

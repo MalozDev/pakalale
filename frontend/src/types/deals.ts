@@ -19,15 +19,3 @@ export interface Deal {
   location: string;
   isActive: boolean;
 }
-
-export interface Message {
-  id: string;
-  dealId: string;
-  senderId: string;
-  senderName: string;
-  senderRole: "customer" | "shop_owner";
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-  attachments?: string[];
-}

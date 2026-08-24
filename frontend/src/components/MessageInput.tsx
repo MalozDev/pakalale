@@ -1,57 +1,62 @@
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Send, 
-  Image as ImageIcon, 
-  Paperclip, 
-  Mic,
-  X,
-  Camera,
-  FileText
-} from "lucide-react";
+"use client";
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Image as ImageIcon, Paperclip, Mic, X, Camera, FileText, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface MessageInputProps {
-  onSendMessage: (content: string, type?: "text" | "image" | "file") => void;
+  onSendMessage: (content: string, type?: "text" | "image" | "file" | "voice") => void;
   onSendFile?: (file: File) => void;
   onSendImage?: (file: File) => void;
-  onStartRecording?: () => void;
-  onStopRecording?: () => void;
-  isRecording?: boolean;
-  replyTo?: {
-    messageId: string;
-    content: string;
-    senderName: string;
-  };
+  replyTo?: { messageId: string; content: string; senderName: string } | null;
   onCancelReply?: () => void;
   placeholder?: string;
   disabled?: boolean;
 }
 
-function MessageInput({
+export default function MessageInput({
   onSendMessage,
   onSendFile,
   onSendImage,
-  onStartRecording,
-  onStopRecording,
-  isRecording = false,
   replyTo,
   onCancelReply,
   placeholder = "Type a message...",
-  disabled = false
+  disabled = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingBars, setRecordingBars] = useState<number[]>(Array(20).fill(0.3));
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
-
+  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "44px";
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
+      textareaRef.current.style.height = "40px";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 100) + "px";
     }
   }, [message]);
+
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   const handleSend = () => {
     if (message.trim() && !disabled) {
@@ -70,186 +75,254 @@ function MessageInput({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type.startsWith("image/")) {
-        onSendImage?.(file);
-      } else {
-        onSendFile?.(file);
-      }
+      if (file.type.startsWith("image/")) onSendImage?.(file);
+      else onSendFile?.(file);
     }
   };
 
+  // Voice recording
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : "audio/webm",
+      });
 
-  const handleAttachmentClick = (type: "file" | "image" | "camera") => {
-    setShowAttachmentMenu(false);
-    if (type === "file") {
-      fileInputRef.current?.click();
-    } else if (type === "image") {
-      imageInputRef.current?.click();
-    } else if (type === "camera") {
-      // Handle camera access
-      console.log("Camera access requested");
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = mediaRecorder;
+
+      // Set up audio analyser for visual feedback
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 64;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      // Animate recording bars
+      const updateBars = () => {
+        if (!analyserRef.current) return;
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(dataArray);
+        const bars = Array.from({ length: 20 }, (_, i) => {
+          const val = dataArray[i * 2] || 0;
+          return Math.max(0.15, val / 255);
+        });
+        setRecordingBars(bars);
+        animFrameRef.current = requestAnimationFrame(updateBars);
+      };
+      updateBars();
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        // Convert to base64 for storage
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          onSendMessage(base64, "voice");
+        };
+        reader.readAsDataURL(audioBlob);
+
+        // Cleanup
+        stream.getTracks().forEach((track) => track.stop());
+        audioContext.close();
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        analyserRef.current = null;
+      };
+
+      mediaRecorder.start(100); // Collect data every 100ms for smooth waveform
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // Timer
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Microphone access denied:", err);
     }
+  }, [onSendMessage]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    setRecordingBars(Array(20).fill(0.3));
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    // Stop all tracks
+    if (mediaRecorderRef.current?.stream) {
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+    }
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+    setRecordingBars(Array(20).fill(0.3));
+  }, []);
+
+  const formatRecordingTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
+
+  // Recording UI
+  if (isRecording) {
+    return (
+      <div className="bg-background border-t border-border p-3">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-destructive hover:text-destructive"
+            onClick={cancelRecording}
+          >
+            <X className="h-5 w-5" />
+          </Button>
+
+          <div className="flex-1 flex items-center gap-2">
+            <div className="w-2 h-2 bg-destructive rounded-full animate-pulse shrink-0" />
+            <span className="text-sm font-mono text-muted-foreground shrink-0">
+              {formatRecordingTime(recordingTime)}
+            </span>
+
+            {/* Live waveform */}
+            <div className="flex-1 flex items-center justify-center gap-[2px] h-8">
+              {recordingBars.map((height, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-destructive rounded-full transition-all duration-100"
+                  style={{
+                    height: `${height * 100}%`,
+                    minHeight: "3px",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <Button
+            size="icon"
+            className="h-10 w-10 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 shrink-0"
+            onClick={stopRecording}
+          >
+            <Square className="h-4 w-4 fill-current" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-slate-800 border-t border-slate-700 p-4">
-      {/* Reply Context */}
-      <AnimatePresence>
-        {replyTo && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-3 p-3 bg-slate-700 rounded-lg border-l-4 border-amber-golden"
+    <div className="bg-background border-t border-border p-3">
+      {replyTo && (
+        <div className="mb-2 p-2 bg-muted rounded-lg border-l-4 border-primary">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-muted-foreground">Replying to {replyTo.senderName}</p>
+              <p className="text-xs truncate">{replyTo.content}</p>
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onCancelReply}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <div className="relative shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            disabled={disabled}
+            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-400 mb-1">Replying to {replyTo.senderName}</p>
-                <p className="text-sm text-slate-300 truncate">{replyTo.content}</p>
-              </div>
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          {showAttachmentMenu && (
+            <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-lg shadow-lg z-10 p-1">
               <button
-                onClick={onCancelReply}
-                className="p-1 text-slate-400 hover:text-slate-300 transition-colors"
+                onClick={() => { imageInputRef.current?.click(); setShowAttachmentMenu(false); }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted w-full rounded"
               >
-                <X className="h-4 w-4" />
+                <ImageIcon className="h-3.5 w-3.5" /> Photo
+              </button>
+              <button
+                onClick={() => { setShowAttachmentMenu(false); }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted w-full rounded"
+              >
+                <Camera className="h-3.5 w-3.5" /> Camera
+              </button>
+              <button
+                onClick={() => { fileInputRef.current?.click(); setShowAttachmentMenu(false); }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted w-full rounded"
+              >
+                <FileText className="h-3.5 w-3.5" /> Document
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Input Area */}
-      <div className="flex items-center space-x-3">
-        {/* Attachment Button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-            disabled={disabled}
-            className="p-2 text-slate-400 hover:text-slate-300 hover:bg-slate-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Paperclip className="h-5 w-5" />
-          </button>
-
-          {/* Attachment Menu */}
-          <AnimatePresence>
-            {showAttachmentMenu && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="absolute bottom-full left-0 mb-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-10"
-              >
-                <div className="p-2 space-y-1">
-                  <button
-                    onClick={() => handleAttachmentClick("image")}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 w-full text-left rounded"
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                    <span>Photo</span>
-                  </button>
-                  <button
-                    onClick={() => handleAttachmentClick("camera")}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 w-full text-left rounded"
-                  >
-                    <Camera className="h-4 w-4" />
-                    <span>Camera</span>
-                  </button>
-                  <button
-                    onClick={() => handleAttachmentClick("file")}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 w-full text-left rounded"
-                  >
-                    <FileText className="h-4 w-4" />
-                    <span>Document</span>
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          )}
         </div>
 
-        {/* Text Input */}
-        <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
-            rows={1}
-            className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-full text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-golden focus:border-transparent text-sm resize-none h-[44px] max-h-[120px] leading-5 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              height: "44px",
-              overflow: "hidden",
-            }}
-          />
-        </div>
+        <textarea
+          ref={textareaRef}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          rows={1}
+          className="flex-1 px-3 py-2 bg-muted border border-border rounded-full text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none h-[40px] max-h-[100px]"
+        />
 
-
-        {/* Send/Record Button */}
-        {message.trim() || isRecording ? (
-          <button
-            onClick={handleSend}
+        {message.trim() ? (
+          <Button
+            size="icon"
+            className="h-9 w-9 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
             disabled={disabled || !message.trim()}
-            className="p-2 bg-amber-golden hover:bg-amber-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-full transition-colors"
+            onClick={handleSend}
           >
-            <Send className="h-5 w-5" />
-          </button>
+            <Send className="h-4 w-4" />
+          </Button>
         ) : (
-          <button
-            onClick={isRecording ? onStopRecording : onStartRecording}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-full"
             disabled={disabled}
-            className={`p-2 rounded-full transition-colors ${
-              isRecording 
-                ? "bg-red-500 hover:bg-red-600 text-white" 
-                : "text-slate-400 hover:text-slate-300 hover:bg-slate-700"
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            onClick={startRecording}
           >
-            <Mic className="h-5 w-5" />
-          </button>
+            <Mic className="h-4 w-4" />
+          </Button>
         )}
       </div>
 
-      {/* Hidden File Inputs */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.doc,.docx,.txt,.zip,.rar"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-
-      {/* Recording Indicator */}
-      <AnimatePresence>
-        {isRecording && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-red-300">Recording...</span>
-              <button
-                onClick={onStopRecording}
-                className="ml-auto px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded transition-colors"
-              >
-                Stop
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.zip,.rar" onChange={handleFileSelect} className="hidden" />
+      <input ref={imageInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
     </div>
   );
 }
-
-export default MessageInput;

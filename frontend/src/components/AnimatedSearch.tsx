@@ -1,5 +1,8 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface AnimatedSearchProps {
   placeholder?: string;
@@ -7,7 +10,7 @@ interface AnimatedSearchProps {
   className?: string;
 }
 
-function AnimatedSearch({
+export default function AnimatedSearch({
   placeholder = "Search here....",
   onSearch,
   className = "",
@@ -17,25 +20,19 @@ function AnimatedSearch({
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fullPlaceholder = placeholder;
-
   useEffect(() => {
     const timeout = setTimeout(
       () => {
         if (!isDeleting) {
-          if (placeholderIndex < fullPlaceholder.length) {
-            setAnimatedPlaceholder(
-              fullPlaceholder.slice(0, placeholderIndex + 1)
-            );
+          if (placeholderIndex < placeholder.length) {
+            setAnimatedPlaceholder(placeholder.slice(0, placeholderIndex + 1));
             setPlaceholderIndex(placeholderIndex + 1);
           } else {
             setTimeout(() => setIsDeleting(true), 2000);
           }
         } else {
           if (placeholderIndex > 0) {
-            setAnimatedPlaceholder(
-              fullPlaceholder.slice(0, placeholderIndex - 1)
-            );
+            setAnimatedPlaceholder(placeholder.slice(0, placeholderIndex - 1));
             setPlaceholderIndex(placeholderIndex - 1);
           } else {
             setIsDeleting(false);
@@ -46,7 +43,7 @@ function AnimatedSearch({
     );
 
     return () => clearTimeout(timeout);
-  }, [placeholderIndex, isDeleting, fullPlaceholder]);
+  }, [placeholderIndex, isDeleting, placeholder]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,18 +52,14 @@ function AnimatedSearch({
 
   return (
     <form onSubmit={handleSearch} className={`relative ${className}`}>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={animatedPlaceholder}
-          className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-golden focus:border-transparent transition-all duration-200"
-        />
-      </div>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      <Input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder={animatedPlaceholder}
+        className="pl-10 bg-muted/50 border-border"
+      />
     </form>
   );
 }
-
-export default AnimatedSearch;
