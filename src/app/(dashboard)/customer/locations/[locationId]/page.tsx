@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Store, Star, Search, ArrowLeft, Clock, Users, Phone, Loader2, Package, ShoppingBag, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,11 +17,13 @@ import DealSuccessPopup from "@/components/DealSuccessPopup";
 
 export default function LocationDetailPage() {
   const { locationId } = useParams<{ locationId: string }>();
+  const searchParams = useSearchParams();
+  const initialShopId = searchParams.get("shopId");
   const router = useRouter();
   const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedShop, setSelectedShop] = useState<string | null>(null);
+  const [selectedShop, setSelectedShop] = useState<string | null>(initialShopId);
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null);
   const [dealProduct, setDealProduct] = useState<ProductData | null>(null);
   const [showDealModal, setShowDealModal] = useState(false);
@@ -32,7 +34,7 @@ export default function LocationDetailPage() {
 
   const { data: locData, loading: locLoading } = useLocation(locationId);
   const { data: shopsData, loading: shopsLoading } = useShops({ locationId: locationId || undefined });
-  const { data: productsData } = useProducts(selectedShop ? { shopId: selectedShop } : undefined);
+  const { data: productsData, loading: productsLoading } = useProducts(selectedShop ? { shopId: selectedShop } : undefined);
 
   const location = locData?.location;
   const allShops = shopsData?.shops || [];
@@ -42,6 +44,14 @@ export default function LocationDetailPage() {
     const matchCat = selectedCategory === "all" || s.specialties?.includes(selectedCategory);
     return matchSearch && matchCat;
   });
+
+  // Auto-select shop from URL param once shops are loaded
+  useEffect(() => {
+    if (initialShopId && !selectedShop && allShops.length > 0) {
+      const match = allShops.find((s) => s.id === initialShopId);
+      if (match) setSelectedShop(initialShopId);
+    }
+  }, [initialShopId, allShops, selectedShop]);
 
   const shopProducts = productsData?.products || [];
   const loading = locLoading || shopsLoading;
@@ -167,11 +177,15 @@ export default function LocationDetailPage() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold flex items-center gap-1.5">
                     <Package className="h-4 w-4 text-primary" />
-                    Products ({shopProducts.length})
+                    Products ({productsLoading ? '...' : shopProducts.length})
                   </h3>
                 </div>
 
-                {shopProducts.length === 0 ? (
+                {productsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : shopProducts.length === 0 ? (
                   <div className="text-center py-8">
                     <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
                     <p className="text-xs text-muted-foreground">No products listed yet</p>

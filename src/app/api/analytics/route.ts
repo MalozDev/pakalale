@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import Shop from "@/models/Shop";
 import Product from "@/models/Product";
 import Order from "@/models/Order";
 
@@ -17,13 +18,26 @@ export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
     const { searchParams } = new URL(request.url);
-    const shopId = searchParams.get("shopId");
+    const shopIdParam = searchParams.get("shopId");
 
-    if (!shopId) {
+    if (!shopIdParam) {
       return NextResponse.json({ error: "shopId is required" }, { status: 400 });
     }
 
-    const shopObjectId = new mongoose.Types.ObjectId(shopId);
+    // Resolve: if this is an ownerId (user ID), find the shop first
+    let shopObjectId: mongoose.Types.ObjectId;
+    const existingShop = await Shop.findById(shopIdParam).select("_id").lean();
+    if (existingShop) {
+      shopObjectId = existingShop._id;
+    } else {
+      // Try finding by ownerId
+      const shopByOwner = await Shop.findOne({ ownerId: shopIdParam }).select("_id").lean();
+      if (shopByOwner) {
+        shopObjectId = shopByOwner._id;
+      } else {
+        return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+      }
+    }
 
     const [
       totalProducts,

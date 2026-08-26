@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, PhoneCall, Wifi, WifiOff } from "lucide-react";
+import { ArrowLeft, PhoneCall, Wifi, WifiOff, Loader2 } from "lucide-react";
 import MessageBubble from "@/components/MessageBubble";
 import MessageInput from "@/components/MessageInput";
 import ChatListSimple from "@/components/ChatListSimple";
@@ -210,6 +210,18 @@ export default function ChatPage() {
     hasScrolledOnOpen.current = false;
     window.history.replaceState(null, "", `/customer/chat?chatId=${chat.id}`);
   };
+
+  // Show loading when navigating directly to a chat via URL
+  if (chatIdFromUrl && !activeChat && chats.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+          <p className="text-xs text-muted-foreground">Loading chat...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showChatList) {
     return (

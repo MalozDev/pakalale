@@ -2,6 +2,9 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { Server } from "socket.io";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env", override: true });
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "0.0.0.0";

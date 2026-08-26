@@ -112,7 +112,7 @@ export default function CustomerDashboard() {
                 <Card
                   key={`${shop.id}-${idx}`}
                   className="bg-card border-border hover:border-primary/30 transition-all cursor-pointer shrink-0 min-w-[160px] max-w-[180px]"
-                  onClick={() => router.push(`/customer/locations/${shop.locationId || "soweto"}`)}
+                  onClick={() => router.push(`/customer/locations/${shop.locationId || "soweto"}?shopId=${shop.id}`)}
                 >
                   <CardContent className="p-3">
                     <div className="flex items-center gap-2 mb-2">

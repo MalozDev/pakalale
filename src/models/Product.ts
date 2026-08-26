@@ -16,6 +16,11 @@ export interface IProduct extends Document {
   rating: number;
   reviews: number;
   tags: string[];
+  brand?: string;
+  color?: string;
+  attributes?: Record<string, string>;
+  demandScore?: number;
+  lastSoldAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,9 +41,20 @@ const ProductSchema = new Schema<IProduct>(
     rating: { type: Number, default: 5, min: 0, max: 5 },
     reviews: { type: Number, default: 0 },
     tags: [{ type: String }],
+    brand: { type: String },
+    color: { type: String },
+    attributes: { type: Schema.Types.Mixed },
+    demandScore: { type: Number, default: 0 },
+    lastSoldAt: { type: Date },
   },
   { timestamps: true }
 );
+
+ProductSchema.index({ name: "text", description: "text", tags: "text", category: "text", brand: "text" });
+ProductSchema.index({ category: 1, isAvailable: 1 });
+ProductSchema.index({ shopId: 1, isAvailable: 1 });
+ProductSchema.index({ price: 1 });
+ProductSchema.index({ demandScore: -1 });
 
 const Product: Model<IProduct> =
   mongoose.models.Product || mongoose.model<IProduct>("Product", ProductSchema);

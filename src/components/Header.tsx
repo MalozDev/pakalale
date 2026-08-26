@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import AnimatedSearch from "./AnimatedSearch";
+import SearchOverlay from "./SearchOverlay";
 import { useDealStore } from "@/store/dealStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
-  onSearch?: (query: string) => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   userId?: string;
@@ -20,10 +20,11 @@ interface HeaderProps {
   title?: string;
 }
 
-export default function Header({ onSearch, activeTab = "home", onTabChange, userId, showBack, title }: HeaderProps) {
+export default function Header({ activeTab = "home", onTabChange, userId, showBack, title }: HeaderProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
   const dealCount = useDealStore((s) => s.dealCount);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
@@ -55,6 +56,7 @@ export default function Header({ onSearch, activeTab = "home", onTabChange, user
   ];
 
   return (
+    <>
     <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 h-14">
@@ -72,7 +74,7 @@ export default function Header({ onSearch, activeTab = "home", onTabChange, user
         {title ? (
           <h1 className="text-sm font-bold flex-1 text-center">{title}</h1>
         ) : (
-          <div className="flex-1 max-w-md"><AnimatedSearch onSearch={onSearch} /></div>
+          <div className="flex-1 max-w-md"><AnimatedSearch onClick={() => setSearchOpen(true)} /></div>
         )}
 
         <Button variant="ghost" size="icon" onClick={() => router.push("/customer/settings")} className="shrink-0">
@@ -119,5 +121,9 @@ export default function Header({ onSearch, activeTab = "home", onTabChange, user
         ))}
       </div>
     </header>
+
+      {/* Search Overlay */}
+      <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+    </>
   );
 }

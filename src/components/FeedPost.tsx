@@ -91,7 +91,7 @@ export default function FeedPost({
             className="relative shrink-0 cursor-pointer"
             onClick={() => {
               if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
-                router.push(`/customer/locations/${post.author.shopLocationId}`);
+                router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
               }
             }}
           >
@@ -109,7 +109,7 @@ export default function FeedPost({
                 className="font-semibold text-sm truncate cursor-pointer hover:underline"
                 onClick={() => {
                   if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
-                    router.push(`/customer/locations/${post.author.shopLocationId}`);
+                    router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
                   }
                 }}
               >

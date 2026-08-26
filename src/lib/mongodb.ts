@@ -7,6 +7,10 @@ import "@/models/FeedPost";
 import "@/models/Notification";
 import "@/models/Order";
 import "@/models/Message";
+import "@/models/DemandRecord";
+import "@/models/SearchHistory";
+import "@/models/ProductView";
+import "@/models/FeedEvent";
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/pakalale";
 

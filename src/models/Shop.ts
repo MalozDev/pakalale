@@ -21,6 +21,11 @@ export interface IShop extends Document {
   specialties: string[];
   rating?: number;
   totalReviews: number;
+  coordinates?: { lat: number; lng: number };
+  searchableCategories?: string[];
+  responseRate?: number;
+  avgResponseTime?: number;
+  demandScore?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +49,14 @@ const ShopSchema = new Schema<IShop>(
     specialties: [{ type: String }],
     rating: { type: Number, min: 0, max: 5 },
     totalReviews: { type: Number, default: 0 },
+    coordinates: {
+      lat: { type: Number },
+      lng: { type: Number },
+    },
+    searchableCategories: [{ type: String }],
+    responseRate: { type: Number, default: 0 },
+    avgResponseTime: { type: Number, default: 0 },
+    demandScore: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

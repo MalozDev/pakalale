@@ -2,528 +2,316 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env", override: true });
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/pakalale";
 
-// ── Schemas (inline to avoid model registration issues) ──
+// ── Schemas (inline) ──
 
-const UserSchema = new mongoose.Schema(
-  {
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
-    firstName: { type: String, required: true, trim: true },
-    lastName: { type: String, required: true, trim: true },
-    avatar: { type: String },
-    role: { type: String, enum: ["customer", "shop_owner", "admin"], default: "customer" },
-    isVerified: { type: Boolean, default: false },
-    location: { type: String },
-    phone: { type: String },
-    bio: { type: String },
-  },
-  { timestamps: true }
-);
+const UserSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  firstName: { type: String, required: true, trim: true },
+  lastName: { type: String, required: true, trim: true },
+  avatar: { type: String },
+  role: { type: String, enum: ["customer", "shop_owner", "admin"], default: "customer" },
+  isVerified: { type: Boolean, default: false },
+  location: { type: String },
+  phone: { type: String },
+  bio: { type: String },
+  locationCoordinates: { lat: { type: Number }, lng: { type: Number } },
+  interestedCategories: [{ type: String }],
+}, { timestamps: true });
 
-const ShopSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    description: { type: String, required: true },
-    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    locationId: { type: String },
-    status: { type: String, enum: ["pending", "verified", "rejected"], default: "pending" },
-    contact: {
-      phone: { type: String, default: "" },
-      email: { type: String, default: "" },
-      whatsapp: { type: String },
-    },
-    hours: { type: mongoose.Schema.Types.Mixed, default: {} },
-    coverImage: { type: String },
-    profileImage: { type: String },
-    images: [{ type: String }],
-    specialties: [{ type: String }],
-    rating: { type: Number, min: 0, max: 5 },
-    totalReviews: { type: Number, default: 0 },
-  },
-  { timestamps: true }
-);
+const ShopSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  description: { type: String, required: true },
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  locationId: { type: String },
+  status: { type: String, enum: ["pending", "verified", "rejected"], default: "pending" },
+  contact: { phone: { type: String, default: "" }, email: { type: String, default: "" }, whatsapp: { type: String } },
+  hours: { type: mongoose.Schema.Types.Mixed, default: {} },
+  coverImage: { type: String },
+  profileImage: { type: String },
+  images: [{ type: String }],
+  specialties: [{ type: String }],
+  rating: { type: Number, min: 0, max: 5 },
+  totalReviews: { type: Number, default: 0 },
+  coordinates: { lat: { type: Number }, lng: { type: Number } },
+  searchableCategories: [{ type: String }],
+  responseRate: { type: Number, default: 0 },
+  avgResponseTime: { type: Number, default: 0 },
+  demandScore: { type: Number, default: 0 },
+}, { timestamps: true });
 
-const ProductSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    description: { type: String, required: true },
-    price: { type: Number, required: true, min: 0 },
-    originalPrice: { type: Number },
-    discount: { type: Number },
-    images: [{ type: String }],
-    category: { type: String, required: true },
-    stock: { type: Number, default: 0, min: 0 },
-    isAvailable: { type: Boolean, default: true },
-    shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true },
-    views: { type: Number, default: 0 },
-    rating: { type: Number, default: 5, min: 0, max: 5 },
-    reviews: { type: Number, default: 0 },
-    tags: [{ type: String }],
-  },
-  { timestamps: true }
-);
+const ProductSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  description: { type: String, required: true },
+  price: { type: Number, required: true, min: 0 },
+  originalPrice: { type: Number },
+  discount: { type: Number },
+  images: [{ type: String }],
+  category: { type: String, required: true },
+  stock: { type: Number, default: 0, min: 0 },
+  isAvailable: { type: Boolean, default: true },
+  shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true },
+  views: { type: Number, default: 0 },
+  rating: { type: Number, default: 5, min: 0, max: 5 },
+  reviews: { type: Number, default: 0 },
+  tags: [{ type: String }],
+  brand: { type: String },
+  color: { type: String },
+  attributes: { type: mongoose.Schema.Types.Mixed },
+  demandScore: { type: Number, default: 0 },
+  lastSoldAt: { type: Date },
+}, { timestamps: true });
 
-const FeedPostSchema = new mongoose.Schema(
-  {
-    content: { type: String, required: true },
-    images: [{ type: String }],
-    authorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    locationId: { type: String },
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    comments: [{
-      authorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      authorName: { type: String },
-      content: { type: String },
-      createdAt: { type: Date, default: Date.now },
-    }],
-    shares: { type: Number, default: 0 },
-    isPromotion: { type: Boolean, default: false },
-    product: {
-      name: { type: String },
-      price: { type: Number },
-      originalPrice: { type: Number },
-      discount: { type: Number },
-      image: { type: String },
-      shopId: { type: mongoose.Schema.Types.ObjectId },
-    },
-  },
-  { timestamps: true }
-);
+const FeedPostSchema = new mongoose.Schema({
+  content: { type: String, required: true },
+  images: [{ type: String }],
+  authorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  locationId: { type: String },
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  comments: [{ authorId: { type: mongoose.Schema.Types.ObjectId }, authorName: { type: String }, content: { type: String }, createdAt: { type: Date, default: Date.now } }],
+  shares: { type: Number, default: 0 },
+  isPromotion: { type: Boolean, default: false },
+  postType: { type: String, enum: ["promotion", "product_arrival", "price_drop", "customer_request", "customer_review", "shop_announcement", "demand_signal", "general"], default: "general" },
+  autoGenerated: { type: Boolean, default: false },
+  relatedProductId: { type: mongoose.Schema.Types.ObjectId },
+  relatedShopId: { type: mongoose.Schema.Types.ObjectId },
+  rankScore: { type: Number, default: 0 },
+  product: { name: { type: String }, price: { type: Number }, originalPrice: { type: Number }, discount: { type: Number }, image: { type: String }, shopId: { type: mongoose.Schema.Types.ObjectId } },
+}, { timestamps: true });
 
-const OrderItemSchema = new mongoose.Schema({
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-  quantity: { type: Number, required: true, min: 1 },
-  price: { type: Number, required: true },
-});
+const OrderItemSchema = new mongoose.Schema({ productId: { type: mongoose.Schema.Types.ObjectId, required: true }, quantity: { type: Number, required: true }, price: { type: Number, required: true } });
+const OrderSchema = new mongoose.Schema({
+  customerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  shopId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  items: [OrderItemSchema],
+  status: { type: String, enum: ["pending", "confirmed", "preparing", "ready", "completed", "cancelled"], default: "pending" },
+  total: { type: Number, required: true },
+  paymentMethod: { type: String, default: "Cash" },
+  notes: { type: String },
+}, { timestamps: true });
 
-const OrderSchema = new mongoose.Schema(
-  {
-    customerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true },
-    items: [OrderItemSchema],
-    status: {
-      type: String,
-      enum: ["pending", "confirmed", "preparing", "ready", "completed", "cancelled"],
-      default: "pending",
-    },
-    total: { type: Number, required: true },
-    paymentMethod: { type: String, default: "Cash" },
-    notes: { type: String },
-  },
-  { timestamps: true }
-);
+const LocationSchema = new mongoose.Schema({
+  name: { type: String, required: true }, slug: { type: String, required: true, unique: true },
+  description: { type: String, required: true }, image: { type: String, default: "" },
+  shopCount: { type: Number, default: 0 }, userCount: { type: Number, default: 0 },
+  rating: { type: Number, default: 0 }, specialties: [{ type: String }],
+  hours: { type: String, default: "" }, contact: { type: String, default: "" },
+  coordinates: { lat: { type: Number }, lng: { type: Number } },
+}, { timestamps: true });
 
-const LocationSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    slug: { type: String, required: true, unique: true },
-    description: { type: String, required: true },
-    image: { type: String, default: "" },
-    shopCount: { type: Number, default: 0 },
-    userCount: { type: Number, default: 0 },
-    rating: { type: Number, default: 0 },
-    specialties: [{ type: String }],
-    hours: { type: String, default: "" },
-    contact: { type: String, default: "" },
-    coordinates: {
-      lat: { type: Number },
-      lng: { type: Number },
-    },
-  },
-  { timestamps: true }
-);
+const ChatMessageSchema = new mongoose.Schema({
+  chatId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  senderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  senderName: { type: String, required: true },
+  senderRole: { type: String, enum: ["customer", "shop_owner"], required: true },
+  content: { type: String, required: true },
+  type: { type: String, enum: ["text", "image", "file", "voice", "deal_update", "system"], default: "text" },
+  isRead: { type: Boolean, default: false },
+  readBy: [{ type: mongoose.Schema.Types.ObjectId }],
+  replyTo: { messageId: { type: mongoose.Schema.Types.ObjectId }, content: { type: String }, senderName: { type: String } },
+  timestamp: { type: Date, default: Date.now },
+}, { timestamps: false });
 
-const ChatMessageSchema = new mongoose.Schema(
-  {
-    chatId: { type: mongoose.Schema.Types.ObjectId, ref: "Chat", required: true },
-    senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    senderName: { type: String, required: true },
-    senderRole: { type: String, enum: ["customer", "shop_owner"], required: true },
-    content: { type: String, required: true },
-    type: { type: String, enum: ["text", "image", "file", "deal_update", "system"], default: "text" },
-    isRead: { type: Boolean, default: false },
-    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    replyTo: {
-      messageId: { type: mongoose.Schema.Types.ObjectId },
-      content: { type: String },
-      senderName: { type: String },
-    },
-    timestamp: { type: Date, default: Date.now },
-  },
-  { timestamps: false }
-);
+const ChatSchema = new mongoose.Schema({
+  type: { type: String, enum: ["deal", "general"], default: "general" },
+  participants: [{ type: mongoose.Schema.Types.ObjectId, required: true }],
+  dealInfo: { productName: { type: String }, initialPrice: { type: Number }, finalPrice: { type: Number }, status: { type: String, enum: ["pending", "negotiating", "confirmed", "completed", "cancelled"], default: "pending" } },
+  lastMessage: { type: mongoose.Schema.Types.ObjectId },
+  lastMessageTime: { type: Date, default: Date.now },
+  isActive: { type: Boolean, default: true },
+}, { timestamps: true });
 
-const ChatSchema = new mongoose.Schema(
-  {
-    type: { type: String, enum: ["deal", "general"], default: "general" },
-    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }],
-    dealInfo: {
-      dealId: { type: mongoose.Schema.Types.ObjectId },
-      productName: { type: String },
-      productImage: { type: String },
-      initialPrice: { type: Number },
-      finalPrice: { type: Number },
-      status: {
-        type: String,
-        enum: ["pending", "negotiating", "confirmed", "completed", "cancelled"],
-        default: "pending",
-      },
-    },
-    lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
-    lastMessageTime: { type: Date, default: Date.now },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true }
-);
+const NotificationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  type: { type: String, enum: ["deal", "message", "review", "shop", "order", "system", "demand", "search_alert"], required: true },
+  title: { type: String, required: true }, message: { type: String, required: true },
+  isRead: { type: Boolean, default: false }, actionUrl: { type: String }, relatedId: { type: mongoose.Schema.Types.ObjectId },
+}, { timestamps: true });
 
-const NotificationSchema = new mongoose.Schema(
-  {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    type: { type: String, enum: ["deal", "message", "review", "shop", "order", "system"], required: true },
-    title: { type: String, required: true },
-    message: { type: String, required: true },
-    isRead: { type: Boolean, default: false },
-    actionUrl: { type: String },
-    relatedId: { type: mongoose.Schema.Types.ObjectId },
-  },
-  { timestamps: true }
-);
+const DemandRecordSchema = new mongoose.Schema({
+  customerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  query: { type: String, required: true },
+  parsedIntent: { productType: { type: String }, brand: { type: String }, color: { type: String }, priceMax: { type: Number } },
+  locationId: { type: String },
+  coordinates: { lat: { type: Number }, lng: { type: Number } },
+  status: { type: String, enum: ["active", "fulfilled", "expired"], default: "active" },
+  responses: [{ shopId: { type: mongoose.Schema.Types.ObjectId }, responseType: { type: String }, message: { type: String }, productId: { type: mongoose.Schema.Types.ObjectId }, timestamp: { type: Date, default: Date.now } }],
+  viewCount: { type: Number, default: 0 },
+  expiresAt: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+}, { timestamps: true });
+
+const SearchHistorySchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  query: { type: String, required: true },
+  resultCount: { type: Number, default: 0 },
+  locationId: { type: String },
+  timestamp: { type: Date, default: Date.now },
+}, { timestamps: false });
+
+const ProductViewSchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId },
+  source: { type: String, enum: ["search", "feed", "shop_page", "direct", "recommendation"], default: "direct" },
+  timestamp: { type: Date, default: Date.now },
+}, { timestamps: false });
 
 // ── Seed Data ──
 
 const LOCATIONS = [
-  {
-    name: "Soweto Market",
-    slug: "soweto",
-    description: "Lusaka's largest and most diverse open-air market, famous for electronics, clothing, and fresh produce from across Zambia.",
-    shopCount: 0,
-    userCount: 0,
-    rating: 4.6,
-    specialties: ["Electronics", "Clothing", "Fresh Produce", "Accessories"],
-    hours: "6:00 AM - 8:00 PM",
-    contact: "+260 211 221234",
-    coordinates: { lat: -15.4167, lng: 28.2833 },
-  },
-  {
-    name: "Kamwala Market",
-    slug: "kamwala",
-    description: "A bustling traditional market known for handcrafts, textiles, and affordable household items. The heart of local commerce.",
-    shopCount: 0,
-    userCount: 0,
-    rating: 4.4,
-    specialties: ["Crafts", "Textiles", "Household Items", "Fresh Food"],
-    hours: "7:00 AM - 7:00 PM",
-    contact: "+260 211 232345",
-    coordinates: { lat: -15.3833, lng: 28.3167 },
-  },
-  {
-    name: "City Market",
-    slug: "city-market",
-    description: "Modern shopping center in the heart of Lusaka with branded stores, restaurants, and electronics outlets.",
-    shopCount: 0,
-    userCount: 0,
-    rating: 4.7,
-    specialties: ["Branded Stores", "Restaurants", "Electronics", "Fashion"],
-    hours: "9:00 AM - 9:00 PM",
-    contact: "+260 211 243456",
-    coordinates: { lat: -15.4167, lng: 28.2833 },
-  },
-  {
-    name: "COMESA Market",
-    slug: "comesa",
-    description: "International trade hub at the COMESA grounds. Great for bulk purchases and cross-border products.",
-    shopCount: 0,
-    userCount: 0,
-    rating: 4.5,
-    specialties: ["International Products", "Regional Trade", "Bulk Goods"],
-    hours: "8:00 AM - 6:00 PM",
-    contact: "+260 211 254567",
-    coordinates: { lat: -15.4500, lng: 28.3000 },
-  },
-  {
-    name: "Munyaule Market",
-    slug: "munyaule",
-    description: "Neighborhood market popular for daily essentials, fresh food, and affordable clothing. Great for families.",
-    shopCount: 0,
-    userCount: 0,
-    rating: 4.3,
-    specialties: ["Fresh Food", "Daily Essentials", "Clothing", "Shoes"],
-    hours: "6:00 AM - 7:00 PM",
-    contact: "+260 211 265678",
-    coordinates: { lat: -15.3667, lng: 28.3333 },
-  },
+  { name: "Soweto Market", slug: "soweto", description: "Lusaka's largest and most diverse open-air market.", rating: 4.6, specialties: ["Electronics", "Clothing", "Fresh Produce", "Accessories"], hours: "6:00 AM - 8:00 PM", contact: "+260 211 221234", coordinates: { lat: -15.4167, lng: 28.2833 } },
+  { name: "Kamwala Market", slug: "kamwala", description: "A bustling traditional market known for handcrafts and textiles.", rating: 4.4, specialties: ["Crafts", "Textiles", "Household Items", "Fresh Food"], hours: "7:00 AM - 7:00 PM", contact: "+260 211 232345", coordinates: { lat: -15.3833, lng: 28.3167 } },
+  { name: "City Market", slug: "city-market", description: "Modern shopping center in the heart of Lusaka.", rating: 4.7, specialties: ["Branded Stores", "Restaurants", "Electronics", "Fashion"], hours: "9:00 AM - 9:00 PM", contact: "+260 211 243456", coordinates: { lat: -15.4167, lng: 28.2833 } },
+  { name: "COMESA Market", slug: "comesa", description: "International trade hub at the COMESA grounds.", rating: 4.5, specialties: ["International Products", "Regional Trade", "Bulk Goods"], hours: "8:00 AM - 6:00 PM", contact: "+260 211 254567", coordinates: { lat: -15.4500, lng: 28.3000 } },
+  { name: "Munyaule Market", slug: "munyaule", description: "Neighborhood market popular for daily essentials.", rating: 4.3, specialties: ["Fresh Food", "Daily Essentials", "Clothing", "Shoes"], hours: "6:00 AM - 7:00 PM", contact: "+260 211 265678", coordinates: { lat: -15.3667, lng: 28.3333 } },
+  { name: "Olympia Market", slug: "olympia", description: "Upscale shopping area with quality goods.", rating: 4.5, specialties: ["Furniture", "Home Decor", "Electronics", "Fashion"], hours: "8:00 AM - 8:00 PM", contact: "+260 211 276789", coordinates: { lat: -15.4000, lng: 28.2600 } },
+  { name: "Mandahill Market", slug: "mandahill", description: "Popular market known for affordable fashion.", rating: 4.2, specialties: ["Fashion", "Shoes", "Accessories", "Bags"], hours: "7:00 AM - 7:00 PM", contact: "+260 211 287890", coordinates: { lat: -15.3900, lng: 28.3000 } },
+  { name: "Chelston Market", slug: "chelston", description: "Community market serving the Chelston area.", rating: 4.1, specialties: ["Groceries", "Household", "Fresh Food", "Baking"], hours: "6:00 AM - 6:00 PM", contact: "+260 211 298901", coordinates: { lat: -15.4300, lng: 28.3200 } },
 ];
 
 const SHOP_DATA = [
-  {
-    name: "TechHub Zambia",
-    description: "Lusaka's premier electronics destination. We stock genuine phones, laptops, tablets and accessories with full manufacturer warranty. Free delivery within Lusaka for orders over K2,000.",
-    locationId: "soweto",
-    specialties: ["Electronics", "Mobile Phones", "Laptops", "Accessories"],
-    rating: 4.8,
-    totalReviews: 156,
-    contact: { phone: "+260 97 123 4567", email: "info@techhubzm.com", whatsapp: "+260 97 123 4567" },
-    hours: {
-      monday: { open: "08:00", close: "19:00", closed: false },
-      tuesday: { open: "08:00", close: "19:00", closed: false },
-      wednesday: { open: "08:00", close: "19:00", closed: false },
-      thursday: { open: "08:00", close: "19:00", closed: false },
-      friday: { open: "08:00", close: "20:00", closed: false },
-      saturday: { open: "09:00", close: "20:00", closed: false },
-      sunday: { open: "10:00", close: "17:00", closed: false },
-    },
-  },
-  {
-    name: "FreshBasket Market",
-    description: "Farm-fresh vegetables, fruits and local produce sourced directly from Zambian farmers. Open daily with the freshest seasonal selection. Wholesale and retail available.",
-    locationId: "city-market",
-    specialties: ["Fresh Vegetables", "Fruits", "Grains", "Dairy"],
-    rating: 4.9,
-    totalReviews: 203,
-    contact: { phone: "+260 96 234 5678", email: "hello@freshbasket.co.zm", whatsapp: "+260 96 234 5678" },
-    hours: {
-      monday: { open: "05:00", close: "18:00", closed: false },
-      tuesday: { open: "05:00", close: "18:00", closed: false },
-      wednesday: { open: "05:00", close: "18:00", closed: false },
-      thursday: { open: "05:00", close: "18:00", closed: false },
-      friday: { open: "05:00", close: "18:00", closed: false },
-      saturday: { open: "05:00", close: "16:00", closed: false },
-      sunday: { open: "06:00", close: "14:00", closed: false },
-    },
-  },
-  {
-    name: "StyleVault Fashion",
-    description: "Trendy fashion for men and women. From everyday casual to formal wear, we have the latest styles from local and international brands. Alterations available.",
-    locationId: "munyaule",
-    specialties: ["Fashion", "Clothing", "Shoes", "Accessories"],
-    rating: 4.6,
-    totalReviews: 89,
-    contact: { phone: "+260 95 345 6789", email: "style@stylevault.co.zm", whatsapp: "+260 95 345 6789" },
-    hours: {
-      monday: { open: "09:00", close: "19:00", closed: false },
-      tuesday: { open: "09:00", close: "19:00", closed: false },
-      wednesday: { open: "09:00", close: "19:00", closed: false },
-      thursday: { open: "09:00", close: "19:00", closed: false },
-      friday: { open: "09:00", close: "20:00", closed: false },
-      saturday: { open: "09:00", close: "20:00", closed: false },
-      sunday: { open: "10:00", close: "16:00", closed: false },
-    },
-  },
-  {
-    name: "HomeComfort Plus",
-    description: "One-stop shop for furniture, home décor and appliances. We offer quality pieces at competitive prices. Delivery and assembly services available across Lusaka.",
-    locationId: "kamwala",
-    specialties: ["Furniture", "Home Decor", "Appliances", "Kitchenware"],
-    rating: 4.7,
-    totalReviews: 124,
-    contact: { phone: "+260 97 456 7890", email: "info@homecomfort.co.zm", whatsapp: "+260 97 456 7890" },
-    hours: {
-      monday: { open: "08:00", close: "18:00", closed: false },
-      tuesday: { open: "08:00", close: "18:00", closed: false },
-      wednesday: { open: "08:00", close: "18:00", closed: false },
-      thursday: { open: "08:00", close: "18:00", closed: false },
-      friday: { open: "08:00", close: "19:00", closed: false },
-      saturday: { open: "09:00", close: "19:00", closed: false },
-      sunday: { open: "10:00", close: "15:00", closed: false },
-    },
-  },
-  {
-    name: "GameZone Zambia",
-    description: "Your gaming paradise! Consoles, games, gaming accessories and PCs. We also do repairs and custom builds. Trade-in your old gear for discounts.",
-    locationId: "comesa",
-    specialties: ["Gaming", "Consoles", "PC Gaming", "Accessories"],
-    rating: 4.5,
-    totalReviews: 67,
-    contact: { phone: "+260 96 567 8901", email: "play@gamezone.co.zm", whatsapp: "+260 96 567 8901" },
-    hours: {
-      monday: { open: "10:00", close: "21:00", closed: false },
-      tuesday: { open: "10:00", close: "21:00", closed: false },
-      wednesday: { open: "10:00", close: "21:00", closed: false },
-      thursday: { open: "10:00", close: "21:00", closed: false },
-      friday: { open: "10:00", close: "22:00", closed: false },
-      saturday: { open: "09:00", close: "22:00", closed: false },
-      sunday: { open: "10:00", close: "18:00", closed: false },
-    },
-  },
-  {
-    name: "PharmaCare Health",
-    description: "Lusaka's trusted pharmacy and health store. Genuine medicines, vitamins, baby care and wellness products. Licensed pharmacists on site. Free health consultations every Saturday.",
-    locationId: "city-market",
-    specialties: ["Pharmacy", "Health", "Baby Care", "Wellness"],
-    rating: 4.9,
-    totalReviews: 312,
-    contact: { phone: "+260 97 888 1234", email: "info@pharmacare.co.zm", whatsapp: "+260 97 888 1234" },
-    hours: {
-      monday: { open: "07:00", close: "21:00", closed: false },
-      tuesday: { open: "07:00", close: "21:00", closed: false },
-      wednesday: { open: "07:00", close: "21:00", closed: false },
-      thursday: { open: "07:00", close: "21:00", closed: false },
-      friday: { open: "07:00", close: "22:00", closed: false },
-      saturday: { open: "08:00", close: "20:00", closed: false },
-      sunday: { open: "08:00", close: "18:00", closed: false },
-    },
-  },
+  { name: "TechHub Zambia", description: "Lusaka's premier electronics destination. Phones, laptops, accessories.", locationId: "soweto", specialties: ["Electronics", "Mobile Phones", "Laptops", "Accessories"], rating: 4.8, totalReviews: 156, contact: { phone: "+260 97 123 4567", email: "info@techhubzm.com", whatsapp: "+260 97 123 4567" }, coordinates: { lat: -15.4170, lng: 28.2830 } },
+  { name: "FreshBasket Market", description: "Farm-fresh vegetables, fruits and local produce.", locationId: "city-market", specialties: ["Fresh Vegetables", "Fruits", "Grains", "Dairy"], rating: 4.9, totalReviews: 203, contact: { phone: "+260 96 234 5678", email: "hello@freshbasket.co.zm", whatsapp: "+260 96 234 5678" }, coordinates: { lat: -15.4165, lng: 28.2840 } },
+  { name: "StyleVault Fashion", description: "Trendy fashion for men and women.", locationId: "munyaule", specialties: ["Fashion", "Clothing", "Shoes", "Accessories"], rating: 4.6, totalReviews: 89, contact: { phone: "+260 95 345 6789", email: "style@stylevault.co.zm", whatsapp: "+260 95 345 6789" }, coordinates: { lat: -15.3670, lng: 28.3330 } },
+  { name: "HomeComfort Plus", description: "Furniture, home decor and appliances.", locationId: "kamwala", specialties: ["Furniture", "Home Decor", "Appliances", "Kitchenware"], rating: 4.7, totalReviews: 124, contact: { phone: "+260 97 456 7890", email: "info@homecomfort.co.zm", whatsapp: "+260 97 456 7890" }, coordinates: { lat: -15.3835, lng: 28.3165 } },
+  { name: "GameZone Zambia", description: "Gaming paradise! Consoles, games, accessories.", locationId: "comesa", specialties: ["Gaming", "Consoles", "PC Gaming", "Accessories"], rating: 4.5, totalReviews: 67, contact: { phone: "+260 96 567 8901", email: "play@gamezone.co.zm", whatsapp: "+260 96 567 8901" }, coordinates: { lat: -15.4505, lng: 28.3005 } },
+  { name: "PharmaCare Health", description: "Trusted pharmacy and health store.", locationId: "city-market", specialties: ["Pharmacy", "Health", "Baby Care", "Wellness"], rating: 4.9, totalReviews: 312, contact: { phone: "+260 97 888 1234", email: "info@pharmacare.co.zm", whatsapp: "+260 97 888 1234" }, coordinates: { lat: -15.4162, lng: 28.2838 } },
+  { name: "Urban Sole", description: "Premium sneakers and streetwear. Nike, Adidas, Puma.", locationId: "mandahill", specialties: ["Sneakers", "Streetwear", "Sportswear", "Accessories"], rating: 4.7, totalReviews: 145, contact: { phone: "+260 96 111 2233", email: "info@urbansole.co.zm", whatsapp: "+260 96 111 2233" }, coordinates: { lat: -15.3905, lng: 28.3005 } },
+  { name: "BookWorld Zambia", description: "Books, stationery, school supplies.", locationId: "city-market", specialties: ["Books", "Stationery", "School Supplies", "Educational"], rating: 4.6, totalReviews: 98, contact: { phone: "+260 95 222 3344", email: "info@bookworld.co.zm", whatsapp: "+260 95 222 3344" }, coordinates: { lat: -15.4175, lng: 28.2835 } },
+  { name: "FreshMart Groceries", description: "Affordable groceries and household essentials.", locationId: "chelston", specialties: ["Groceries", "Household", "Fresh Food", "Beverages"], rating: 4.4, totalReviews: 178, contact: { phone: "+260 97 333 4455", email: "info@freshmart.co.zm", whatsapp: "+260 97 333 4455" }, coordinates: { lat: -15.4305, lng: 28.3205 } },
+  { name: "MegaBuild Hardware", description: "Construction materials and tools.", locationId: "kamwala", specialties: ["Hardware", "Construction", "Tools", "Electrical"], rating: 4.5, totalReviews: 89, contact: { phone: "+260 96 444 5566", email: "info@megabuild.co.zm", whatsapp: "+260 96 444 5566" }, coordinates: { lat: -15.3840, lng: 28.3170 } },
+  { name: "GadgetStore Zambia", description: "Latest gadgets, smartwatches, earbuds.", locationId: "soweto", specialties: ["Gadgets", "Smartwatches", "Earbuds", "Tech Accessories"], rating: 4.4, totalReviews: 67, contact: { phone: "+260 95 555 6677", email: "info@gadgetstore.co.zm", whatsapp: "+260 95 555 6677" }, coordinates: { lat: -15.4168, lng: 28.2832 } },
+  { name: "FitZone Sports", description: "Sports equipment and gym gear.", locationId: "olympia", specialties: ["Sports Equipment", "Gym Gear", "Jerseys", "Fitness"], rating: 4.6, totalReviews: 112, contact: { phone: "+260 97 666 7788", email: "info@fitzone.co.zm", whatsapp: "+260 97 666 7788" }, coordinates: { lat: -15.4005, lng: 28.2605 } },
+  { name: "BabyPlanet", description: "Everything for baby!", locationId: "city-market", specialties: ["Baby Products", "Toys", "Nursery", "Children Clothing"], rating: 4.8, totalReviews: 234, contact: { phone: "+260 96 777 8899", email: "info@babyplanet.co.zm", whatsapp: "+260 96 777 8899" }, coordinates: { lat: -15.4160, lng: 28.2836 } },
+  { name: "AutoZone Zambia", description: "Car parts and automotive supplies.", locationId: "comesa", specialties: ["Car Parts", "Tyres", "Oil", "Automotive Tools"], rating: 4.3, totalReviews: 56, contact: { phone: "+260 95 888 9900", email: "info@autozone.co.zm", whatsapp: "+260 95 888 9900" }, coordinates: { lat: -15.4498, lng: 28.2998 } },
+  { name: "LushBeauty", description: "Cosmetics, skincare, haircare, perfumes.", locationId: "mandahill", specialties: ["Cosmetics", "Skincare", "Haircare", "Perfumes"], rating: 4.7, totalReviews: 189, contact: { phone: "+260 97 999 0011", email: "info@lushbeauty.co.zm", whatsapp: "+260 97 999 0011" }, coordinates: { lat: -15.3898, lng: 28.2998 } },
+  { name: "PetWorld", description: "Pet food, accessories, grooming.", locationId: "olympia", specialties: ["Pet Food", "Pet Accessories", "Grooming", "Veterinary"], rating: 4.5, totalReviews: 78, contact: { phone: "+260 96 000 1122", email: "info@petworld.co.zm", whatsapp: "+260 96 000 1122" }, coordinates: { lat: -15.3998, lng: 28.2598 } },
+  { name: "MobileZone", description: "Budget phones, cases, repairs.", locationId: "soweto", specialties: ["Budget Phones", "Phone Cases", "Repairs", "Screen Protectors"], rating: 4.3, totalReviews: 234, contact: { phone: "+260 95 111 0022", email: "info@mobilezone.co.zm", whatsapp: "+260 95 111 0022" }, coordinates: { lat: -15.4172, lng: 28.2828 } },
 ];
 
-const PRODUCTS_DATA = [
-  // TechHub Zambia products
-  { name: "Samsung Galaxy A15", description: "6.5\" Super AMOLED display, 50MP camera, 5000mAh battery. Great value smartphone.", price: 2800, originalPrice: 3200, discount: 12, stock: 24, category: "Mobile Phones", rating: 4.6, reviews: 45, tags: ["samsung", "smartphone", "budget"], shopIndex: 0 },
-  { name: "iPhone 15 Pro Max", description: "Apple's flagship with A17 Pro chip, titanium design, 48MP camera system.", price: 18500, originalPrice: 20000, discount: 7, stock: 8, category: "Mobile Phones", rating: 4.9, reviews: 23, tags: ["apple", "iphone", "flagship"], shopIndex: 0 },
-  { name: "Tecno Spark 20 Pro", description: "108MP camera, 6.78\" display, MediaTek Helio G99. Perfect for photography.", price: 3200, stock: 30, category: "Mobile Phones", rating: 4.4, reviews: 67, tags: ["tecno", "smartphone", "camera"], shopIndex: 0 },
-  { name: "HP Laptop 15s", description: "Intel Core i5, 8GB RAM, 512GB SSD, 15.6\" FHD display. Ideal for work and study.", price: 12000, stock: 6, category: "Laptops", rating: 4.7, reviews: 18, tags: ["hp", "laptop", "work"], shopIndex: 0 },
-  { name: "JBL Tune 520BT Headphones", description: "Wireless on-ear headphones with 57H battery life and JBL Pure Bass sound.", price: 650, originalPrice: 850, discount: 23, stock: 40, category: "Accessories", rating: 4.5, reviews: 89, tags: ["jbl", "headphones", "wireless"], shopIndex: 0 },
-  { name: "Samsung 43\" Smart TV", description: "Crystal UHD 4K display, Tizen OS, HDR10+. Stunning picture quality.", price: 8500, stock: 4, category: "Electronics", rating: 4.8, reviews: 12, tags: ["samsung", "tv", "smart"], shopIndex: 0 },
-  { name: "Anker PowerCore 20000", description: "20000mAh power bank with dual USB ports. Charges 3 devices simultaneously.", price: 450, originalPrice: 550, discount: 18, stock: 55, category: "Accessories", rating: 4.6, reviews: 134, tags: ["anker", "power-bank", "charger"], shopIndex: 0 },
-  { name: "MacBook Air M2 13\"", description: "Apple M2 chip, 8GB RAM, 256GB SSD. Ultra-thin and powerful for professionals.", price: 22000, stock: 3, category: "Laptops", rating: 4.9, reviews: 8, tags: ["apple", "macbook", "laptop"], shopIndex: 0 },
-
-  // FreshBasket Market products
-  { name: "Fresh Tomatoes (5kg)", description: "Locally grown ripe tomatoes, perfect for cooking and salads. Sourced from Lusaka farms.", price: 85, stock: 100, category: "Vegetables", rating: 4.8, reviews: 234, tags: ["tomatoes", "fresh", "vegetables"], shopIndex: 1 },
-  { name: "Green Vegetables Bundle", description: "Mixed leafy greens including rape, cimbuya and nightshade. Washed and ready to cook.", price: 25, stock: 80, category: "Vegetables", rating: 4.7, reviews: 189, tags: ["greens", "vegetables", "fresh"], shopIndex: 1 },
-  { name: "Avocados (dozen)", description: "Ripe Hass avocados, creamy and perfect for toast, guacamole or salads.", price: 120, originalPrice: 150, discount: 20, stock: 60, category: "Fruits", rating: 4.9, reviews: 156, tags: ["avocado", "fruit", "fresh"], shopIndex: 1 },
-  { name: "Mealie Meal 25kg", description: "Premium white mealie meal from Zambia's finest maize. Perfect for nshima.", price: 280, stock: 200, category: "Grains", rating: 4.6, reviews: 345, tags: ["mealie-meal", "nshima", "grain"], shopIndex: 1 },
-  { name: "Fresh Mangoes (3kg)", description: "Sweet Zambian mangoes, in season. Perfect for snacking, juice, or desserts.", price: 65, stock: 45, category: "Fruits", rating: 4.8, reviews: 98, tags: ["mango", "fruit", "seasonal"], shopIndex: 1 },
-  { name: "Free-Range Eggs (30)", description: "Farm fresh free-range eggs from local poultry farms. Rich in protein.", price: 95, stock: 70, category: "Dairy & Eggs", rating: 4.7, reviews: 167, tags: ["eggs", "fresh", "protein"], shopIndex: 1 },
-  { name: "Bananas (bunch)", description: "Sweet ripe bananas, perfect for breakfast or snacking. Locally sourced.", price: 35, stock: 120, category: "Fruits", rating: 4.5, reviews: 201, tags: ["banana", "fruit", "fresh"], shopIndex: 1 },
-
-  // StyleVault Fashion products
-  { name: "Men's Chino Trousers", description: "Classic fit chino trousers in navy, khaki or olive. Stretch cotton for comfort.", price: 350, originalPrice: 450, discount: 22, stock: 35, category: "Men's Wear", rating: 4.5, reviews: 78, tags: ["men", "trousers", "casual"], shopIndex: 2 },
-  { name: "Women's Floral Dress", description: "Beautiful floral print sundress, perfect for any occasion. Available in multiple sizes.", price: 480, stock: 20, category: "Women's Wear", rating: 4.7, reviews: 56, tags: ["women", "dress", "fashion"], shopIndex: 2 },
-  { name: "Men's Leather Shoes", description: "Genuine leather formal shoes, handcrafted for durability and style.", price: 650, originalPrice: 800, discount: 19, stock: 15, category: "Shoes", rating: 4.6, reviews: 43, tags: ["men", "shoes", "leather"], shopIndex: 2 },
-  { name: "Women's Handbag", description: "Premium leather handbag with multiple compartments. Stylish and functional.", price: 550, stock: 25, category: "Accessories", rating: 4.8, reviews: 34, tags: ["women", "bag", "leather"], shopIndex: 2 },
-  { name: "Denim Jacket", description: "Classic denim jacket, unisex style. Perfect for the cooler evenings.", price: 420, stock: 18, category: "Outerwear", rating: 4.4, reviews: 29, tags: ["denim", "jacket", "unisex"], shopIndex: 2 },
-
-  // HomeComfort Plus products
-  { name: "3-Seater Sofa", description: "Comfortable fabric sofa with solid wood frame. Available in grey, beige and navy.", price: 4500, stock: 8, category: "Living Room", rating: 4.7, reviews: 34, tags: ["sofa", "furniture", "living-room"], shopIndex: 3 },
-  { name: "Queen Size Bed Frame", description: "Solid wood bed frame with slat base. Includes headboard. Mattress sold separately.", price: 3200, stock: 5, category: "Bedroom", rating: 4.8, reviews: 22, tags: ["bed", "furniture", "bedroom"], shopIndex: 3 },
-  { name: "Dining Table Set (4 chairs)", description: "Wooden dining table with 4 matching chairs. Seats 4 comfortably.", price: 5800, stock: 3, category: "Dining", rating: 4.6, reviews: 18, tags: ["dining", "table", "chairs"], shopIndex: 3 },
-  { name: "Microwave Oven 20L", description: "Panasonic 20L microwave with timer and multiple power levels. Sleek black design.", price: 1200, originalPrice: 1500, discount: 20, stock: 12, category: "Appliances", rating: 4.5, reviews: 56, tags: ["microwave", "appliance", "kitchen"], shopIndex: 3 },
-  { name: "Standing Fan 16\"", description: "Adjustable standing fan with 3 speed settings. Oscillating function for wider airflow.", price: 380, stock: 30, category: "Appliances", rating: 4.4, reviews: 89, tags: ["fan", "appliance", "cooling"], shopIndex: 3 },
-
-  // GameZone Zambia products
-  { name: "PlayStation 5 Console", description: "Sony PS5 with DualSense controller. 825GB SSD. Play the latest AAA games.", price: 9500, stock: 6, category: "Consoles", rating: 4.9, reviews: 28, tags: ["playstation", "console", "gaming"], shopIndex: 4 },
-  { name: "Xbox Series X", description: "Microsoft's most powerful console. 1TB SSD, 4K gaming, Game Pass ready.", price: 8800, stock: 4, category: "Consoles", rating: 4.8, reviews: 19, tags: ["xbox", "console", "gaming"], shopIndex: 4 },
-  { name: "FIFA 24 (PS5)", description: "The latest FIFA with enhanced HypermotionV, new PlayStyles, and Ultimate Team.", price: 550, originalPrice: 700, discount: 21, stock: 20, category: "Games", rating: 4.5, reviews: 67, tags: ["fifa", "ps5", "game"], shopIndex: 4 },
-  { name: "Gaming Mouse Logitech G502", description: "HERO 25K sensor, 11 customizable buttons, adjustable weight. Pro-level precision.", price: 780, stock: 15, category: "PC Gaming", rating: 4.7, reviews: 45, tags: ["mouse", "gaming", "logitech"], shopIndex: 4 },
-  { name: "Gaming Chair", description: "Ergonomic gaming chair with lumbar support, adjustable armrests and reclining back.", price: 2800, stock: 7, category: "Accessories", rating: 4.6, reviews: 23, tags: ["chair", "gaming", "ergonomic"], shopIndex: 4 },
-  { name: "Nintendo Switch OLED", description: "7-inch OLED screen, enhanced audio, adjustable stand. Perfect for portable gaming.", price: 7200, stock: 5, category: "Consoles", rating: 4.8, reviews: 31, tags: ["nintendo", "switch", "portable"], shopIndex: 4 },
-
-  // PharmaCare Health products
-  { name: "Panadol Extra (24 tablets)", description: "Fast relief from headaches, body pain and fever. Paracetamol + Caffeine formula.", price: 45, stock: 150, category: "Medicine", rating: 4.9, reviews: 289, tags: ["panadol", "pain-relief", "medicine"], shopIndex: 5 },
-  { name: "Vitamin C 1000mg (60 caps)", description: "High-potency Vitamin C supplement. Boosts immunity and energy. Orange-flavoured.", price: 120, originalPrice: 150, discount: 20, stock: 80, category: "Vitamins", rating: 4.7, reviews: 156, tags: ["vitamin-c", "immunity", "supplement"], shopIndex: 5 },
-  { name: "Baby Diapers (Medium 40pc)", description: "Soft and absorbent baby diapers. Size M for 6-11kg babies. Rash-free guarantee.", price: 180, stock: 60, category: "Baby Care", rating: 4.8, reviews: 198, tags: ["diapers", "baby", "care"], shopIndex: 5 },
-  { name: "Blood Pressure Monitor", description: "Digital automatic blood pressure monitor. Large display, memory for 2 users. Clinically validated.", price: 650, originalPrice: 800, discount: 19, stock: 25, category: "Wellness", rating: 4.6, reviews: 67, tags: ["blood-pressure", "monitor", "health"], shopIndex: 5 },
-  { name: "Multivitamin Gummies (60pc)", description: "Delicious daily multivitamin gummies for the whole family. 13 essential vitamins.", price: 95, stock: 100, category: "Vitamins", rating: 4.8, reviews: 134, tags: ["multivitamin", "gummies", "family"], shopIndex: 5 },
-  { name: "Sunscreen SPF50 (100ml)", description: "Broad spectrum UVA/UVB protection. Lightweight, non-greasy. Water resistant 80 mins.", price: 145, stock: 45, category: "Skincare", rating: 4.7, reviews: 89, tags: ["sunscreen", "spf50", "skincare"], shopIndex: 5 },
+const ALL_PRODUCTS: Array<{ name: string; description: string; price: number; originalPrice?: number; discount?: number; stock: number; category: string; rating: number; reviews: number; tags: string[]; brand?: string; color?: string; shopIndex: number }> = [
+  { name: "Samsung Galaxy A15", description: "6.5\" Super AMOLED, 50MP camera, 5000mAh.", price: 2800, originalPrice: 3200, discount: 12, stock: 24, category: "Mobile Phones", rating: 4.6, reviews: 45, tags: ["samsung", "smartphone"], brand: "Samsung", color: "black", shopIndex: 0 },
+  { name: "iPhone 15 Pro Max", description: "A17 Pro chip, titanium design, 48MP camera.", price: 18500, originalPrice: 20000, discount: 7, stock: 8, category: "Mobile Phones", rating: 4.9, reviews: 23, tags: ["apple", "iphone", "flagship"], brand: "Apple", color: "black", shopIndex: 0 },
+  { name: "Tecno Spark 20 Pro", description: "108MP camera, 6.78\" display.", price: 3200, stock: 30, category: "Mobile Phones", rating: 4.4, reviews: 67, tags: ["tecno", "smartphone"], brand: "Tecno", shopIndex: 0 },
+  { name: "HP Laptop 15s", description: "Intel Core i5, 8GB RAM, 512GB SSD.", price: 12000, stock: 6, category: "Laptops", rating: 4.7, reviews: 18, tags: ["hp", "laptop"], brand: "HP", shopIndex: 0 },
+  { name: "JBL Tune 520BT Headphones", description: "Wireless, 57H battery life.", price: 650, originalPrice: 850, discount: 23, stock: 40, category: "Accessories", rating: 4.5, reviews: 89, tags: ["jbl", "headphones", "wireless"], brand: "JBL", shopIndex: 0 },
+  { name: "Samsung 43\" Smart TV", description: "Crystal UHD 4K, Tizen OS.", price: 8500, stock: 4, category: "Electronics", rating: 4.8, reviews: 12, tags: ["samsung", "tv", "4k"], brand: "Samsung", shopIndex: 0 },
+  { name: "Anker PowerCore 20000", description: "20000mAh power bank.", price: 450, originalPrice: 550, discount: 18, stock: 55, category: "Accessories", rating: 4.6, reviews: 134, tags: ["anker", "power-bank"], brand: "Anker", shopIndex: 0 },
+  { name: "MacBook Air M2 13\"", description: "Apple M2 chip, 8GB RAM.", price: 22000, stock: 3, category: "Laptops", rating: 4.9, reviews: 8, tags: ["apple", "macbook"], brand: "Apple", shopIndex: 0 },
+  { name: "Xiaomi Redmi Note 13", description: "108MP camera, AMOLED display.", price: 2400, originalPrice: 2800, discount: 14, stock: 35, category: "Mobile Phones", rating: 4.5, reviews: 78, tags: ["xiaomi", "redmi"], brand: "Xiaomi", shopIndex: 0 },
+  { name: "Logitech Wireless Mouse", description: "Ergonomic, 12-month battery.", price: 280, stock: 50, category: "Accessories", rating: 4.4, reviews: 56, tags: ["logitech", "mouse"], brand: "Logitech", shopIndex: 0 },
+  { name: "Fresh Tomatoes (5kg)", description: "Locally grown ripe tomatoes.", price: 85, stock: 100, category: "Vegetables", rating: 4.8, reviews: 234, tags: ["tomatoes", "fresh", "vegetables"], shopIndex: 1 },
+  { name: "Green Vegetables Bundle", description: "Mixed leafy greens.", price: 25, stock: 80, category: "Vegetables", rating: 4.7, reviews: 189, tags: ["greens", "vegetables"], shopIndex: 1 },
+  { name: "Avocados (dozen)", description: "Ripe Hass avocados.", price: 120, originalPrice: 150, discount: 20, stock: 60, category: "Fruits", rating: 4.9, reviews: 156, tags: ["avocado", "fruit"], shopIndex: 1 },
+  { name: "Mealie Meal 25kg", description: "Premium white mealie meal.", price: 280, stock: 200, category: "Grains", rating: 4.6, reviews: 345, tags: ["mealie-meal", "nshima"], shopIndex: 1 },
+  { name: "Fresh Mangoes (3kg)", description: "Sweet Zambian mangoes.", price: 65, stock: 45, category: "Fruits", rating: 4.8, reviews: 98, tags: ["mango", "fruit"], shopIndex: 1 },
+  { name: "Free-Range Eggs (30)", description: "Farm fresh eggs.", price: 95, stock: 70, category: "Dairy & Eggs", rating: 4.7, reviews: 167, tags: ["eggs", "fresh"], shopIndex: 1 },
+  { name: "Bananas (bunch)", description: "Sweet ripe bananas.", price: 35, stock: 120, category: "Fruits", rating: 4.5, reviews: 201, tags: ["banana", "fruit"], shopIndex: 1 },
+  { name: "Onions (5kg)", description: "Fresh red onions.", price: 75, stock: 90, category: "Vegetables", rating: 4.6, reviews: 145, tags: ["onions", "vegetables"], shopIndex: 1 },
+  { name: "Groundnuts (1kg)", description: "Roasted and salted.", price: 55, stock: 65, category: "Snacks", rating: 4.7, reviews: 112, tags: ["groundnuts", "nuts"], shopIndex: 1 },
+  { name: "Men's Chino Trousers", description: "Classic fit chinos.", price: 350, originalPrice: 450, discount: 22, stock: 35, category: "Men's Wear", rating: 4.5, reviews: 78, tags: ["men", "trousers"], shopIndex: 2 },
+  { name: "Women's Floral Dress", description: "Beautiful floral sundress.", price: 480, stock: 20, category: "Women's Wear", rating: 4.7, reviews: 56, tags: ["women", "dress", "floral"], shopIndex: 2 },
+  { name: "Men's Leather Shoes", description: "Genuine leather formal shoes.", price: 650, originalPrice: 800, discount: 19, stock: 15, category: "Shoes", rating: 4.6, reviews: 43, tags: ["men", "shoes", "leather"], shopIndex: 2 },
+  { name: "Women's Handbag", description: "Premium leather handbag.", price: 550, stock: 25, category: "Accessories", rating: 4.8, reviews: 34, tags: ["women", "bag", "leather"], shopIndex: 2 },
+  { name: "Denim Jacket", description: "Classic unisex denim jacket.", price: 420, stock: 18, category: "Outerwear", rating: 4.4, reviews: 29, tags: ["denim", "jacket"], shopIndex: 2 },
+  { name: "Men's Formal Suit", description: "Two-piece formal suit.", price: 1200, originalPrice: 1500, discount: 20, stock: 10, category: "Men's Wear", rating: 4.7, reviews: 22, tags: ["men", "suit", "formal"], shopIndex: 2 },
+  { name: "Women's Ankara Print Dress", description: "African print dress.", price: 380, stock: 15, category: "Women's Wear", rating: 4.8, reviews: 45, tags: ["women", "ankara", "african"], shopIndex: 2 },
+  { name: "3-Seater Sofa", description: "Comfortable fabric sofa.", price: 4500, stock: 8, category: "Living Room", rating: 4.7, reviews: 34, tags: ["sofa", "furniture"], shopIndex: 3 },
+  { name: "Queen Size Bed Frame", description: "Solid wood bed frame.", price: 3200, stock: 5, category: "Bedroom", rating: 4.8, reviews: 22, tags: ["bed", "furniture"], shopIndex: 3 },
+  { name: "Dining Table Set (4 chairs)", description: "Wooden table with chairs.", price: 5800, stock: 3, category: "Dining", rating: 4.6, reviews: 18, tags: ["dining", "table"], shopIndex: 3 },
+  { name: "Microwave Oven 20L", description: "Panasonic microwave.", price: 1200, originalPrice: 1500, discount: 20, stock: 12, category: "Appliances", rating: 4.5, reviews: 56, tags: ["microwave", "appliance"], shopIndex: 3 },
+  { name: "Standing Fan 16\"", description: "3 speed settings.", price: 380, stock: 30, category: "Appliances", rating: 4.4, reviews: 89, tags: ["fan", "appliance"], shopIndex: 3 },
+  { name: "Refrigerator 200L", description: "Hisense double door.", price: 6500, stock: 4, category: "Appliances", rating: 4.7, reviews: 34, tags: ["fridge", "appliance"], shopIndex: 3 },
+  { name: "Office Desk", description: "Executive desk with drawers.", price: 2800, stock: 6, category: "Office", rating: 4.5, reviews: 18, tags: ["desk", "office"], shopIndex: 3 },
+  { name: "PlayStation 5 Console", description: "Sony PS5 with DualSense.", price: 9500, stock: 6, category: "Consoles", rating: 4.9, reviews: 28, tags: ["playstation", "console", "gaming"], brand: "Sony", shopIndex: 4 },
+  { name: "Xbox Series X", description: "1TB SSD, 4K gaming.", price: 8800, stock: 4, category: "Consoles", rating: 4.8, reviews: 19, tags: ["xbox", "console"], brand: "Microsoft", shopIndex: 4 },
+  { name: "FIFA 24 (PS5)", description: "Latest FIFA.", price: 550, originalPrice: 700, discount: 21, stock: 20, category: "Games", rating: 4.5, reviews: 67, tags: ["fifa", "ps5", "game"], shopIndex: 4 },
+  { name: "Gaming Mouse Logitech G502", description: "HERO 25K sensor.", price: 780, stock: 15, category: "PC Gaming", rating: 4.7, reviews: 45, tags: ["mouse", "gaming"], brand: "Logitech", shopIndex: 4 },
+  { name: "Gaming Chair", description: "Ergonomic with lumbar support.", price: 2800, stock: 7, category: "Accessories", rating: 4.6, reviews: 23, tags: ["chair", "gaming"], shopIndex: 4 },
+  { name: "Nintendo Switch OLED", description: "7-inch OLED screen.", price: 7200, stock: 5, category: "Consoles", rating: 4.8, reviews: 31, tags: ["nintendo", "switch"], brand: "Nintendo", shopIndex: 4 },
+  { name: "GTA V (PS5)", description: "Enhanced edition.", price: 450, originalPrice: 550, discount: 18, stock: 12, category: "Games", rating: 4.9, reviews: 89, tags: ["gta", "ps5", "game"], shopIndex: 4 },
+  { name: "Panadol Extra (24 tablets)", description: "Pain relief.", price: 45, stock: 150, category: "Medicine", rating: 4.9, reviews: 289, tags: ["panadol", "medicine"], shopIndex: 5 },
+  { name: "Vitamin C 1000mg (60 caps)", description: "Immunity supplement.", price: 120, originalPrice: 150, discount: 20, stock: 80, category: "Vitamins", rating: 4.7, reviews: 156, tags: ["vitamin-c", "supplement"], shopIndex: 5 },
+  { name: "Baby Diapers (Medium 40pc)", description: "Soft diapers.", price: 180, stock: 60, category: "Baby Care", rating: 4.8, reviews: 198, tags: ["diapers", "baby"], shopIndex: 5 },
+  { name: "Blood Pressure Monitor", description: "Digital automatic.", price: 650, originalPrice: 800, discount: 19, stock: 25, category: "Wellness", rating: 4.6, reviews: 67, tags: ["blood-pressure", "health"], shopIndex: 5 },
+  { name: "Multivitamin Gummies (60pc)", description: "Daily vitamins.", price: 95, stock: 100, category: "Vitamins", rating: 4.8, reviews: 134, tags: ["multivitamin", "gummies"], shopIndex: 5 },
+  { name: "Sunscreen SPF50 (100ml)", description: "UVA/UVB protection.", price: 145, stock: 45, category: "Skincare", rating: 4.7, reviews: 89, tags: ["sunscreen", "skincare"], shopIndex: 5 },
+  { name: "Nike Air Force 1 White", description: "Classic all-white AF1.", price: 1800, stock: 20, category: "Shoes", rating: 4.8, reviews: 123, tags: ["nike", "air-force", "sneakers"], brand: "Nike", color: "white", shopIndex: 6 },
+  { name: "Nike Air Max 270", description: "Max Air cushioning.", price: 2200, originalPrice: 2500, discount: 12, stock: 15, category: "Shoes", rating: 4.7, reviews: 89, tags: ["nike", "air-max"], brand: "Nike", shopIndex: 6 },
+  { name: "Adidas Ultraboost 22", description: "Responsive running shoe.", price: 2000, stock: 12, category: "Shoes", rating: 4.6, reviews: 67, tags: ["adidas", "ultraboost"], brand: "Adidas", shopIndex: 6 },
+  { name: "Nike Black Hoodie", description: "Classic cotton hoodie.", price: 850, originalPrice: 950, discount: 10, stock: 25, category: "Men's Wear", rating: 4.5, reviews: 56, tags: ["nike", "hoodie", "black"], brand: "Nike", color: "black", shopIndex: 6 },
+  { name: "Puma RS-X Sneakers", description: "Bold retro-style.", price: 1500, stock: 18, category: "Shoes", rating: 4.4, reviews: 34, tags: ["puma", "sneakers"], brand: "Puma", shopIndex: 6 },
+  { name: "Adidas Stan Smith", description: "Iconic tennis shoe.", price: 1600, stock: 22, category: "Shoes", rating: 4.7, reviews: 78, tags: ["adidas", "stan-smith"], brand: "Adidas", color: "white", shopIndex: 6 },
+  { name: "Nike Black Running Shoes", description: "Lightweight runners.", price: 1900, stock: 14, category: "Shoes", rating: 4.6, reviews: 45, tags: ["nike", "running", "black"], brand: "Nike", color: "black", shopIndex: 6 },
+  { name: "Oxford Dictionary", description: "Essential reference.", price: 180, stock: 40, category: "Books", rating: 4.8, reviews: 156, tags: ["dictionary", "oxford"], shopIndex: 7 },
+  { name: "Mathematics Textbook Grade 12", description: "Zambia school textbook.", price: 95, stock: 60, category: "School Supplies", rating: 4.5, reviews: 234, tags: ["math", "textbook"], shopIndex: 7 },
+  { name: "Notebook Set (5 pack)", description: "A4 ruled notebooks.", price: 45, stock: 100, category: "Stationery", rating: 4.4, reviews: 345, tags: ["notebook", "stationery"], shopIndex: 7 },
+  { name: "Ballpoint Pens (box of 50)", description: "Blue and black.", price: 65, stock: 80, category: "Stationery", rating: 4.3, reviews: 189, tags: ["pens", "stationery"], shopIndex: 7 },
+  { name: "Science Textbook Grade 11", description: "Comprehensive science.", price: 110, stock: 45, category: "School Supplies", rating: 4.6, reviews: 123, tags: ["science", "textbook"], shopIndex: 7 },
+  { name: "Cooking Oil 5L", description: "Pure sunflower oil.", price: 120, stock: 80, category: "Groceries", rating: 4.5, reviews: 234, tags: ["oil", "cooking"], shopIndex: 8 },
+  { name: "Rice 10kg", description: "Long grain parboiled.", price: 180, stock: 60, category: "Groceries", rating: 4.6, reviews: 189, tags: ["rice", "groceries"], shopIndex: 8 },
+  { name: "Sugar 2kg", description: "Fine white sugar.", price: 45, stock: 100, category: "Groceries", rating: 4.4, reviews: 345, tags: ["sugar", "groceries"], shopIndex: 8 },
+  { name: "Coca-Cola (24 pack)", description: "330ml cans.", price: 120, originalPrice: 140, discount: 14, stock: 50, category: "Beverages", rating: 4.5, reviews: 267, tags: ["coke", "drinks"], shopIndex: 8 },
+  { name: "Bread (Loaf)", description: "Fresh white bread.", price: 18, stock: 200, category: "Groceries", rating: 4.3, reviews: 567, tags: ["bread", "fresh"], shopIndex: 8 },
+  { name: "Salt 1kg", description: "Iodized table salt.", price: 15, stock: 120, category: "Groceries", rating: 4.4, reviews: 189, tags: ["salt", "groceries"], shopIndex: 8 },
+  { name: "Cement (50kg bag)", description: "Portland cement 42.5R.", price: 140, stock: 200, category: "Construction", rating: 4.5, reviews: 123, tags: ["cement", "construction"], shopIndex: 9 },
+  { name: "Hammer Drill", description: "Professional 800W.", price: 650, stock: 15, category: "Tools", rating: 4.6, reviews: 45, tags: ["drill", "tools"], shopIndex: 9 },
+  { name: "Electrical Wire (100m)", description: "1.5mm² ZESCO approved.", price: 350, stock: 30, category: "Electrical", rating: 4.4, reviews: 67, tags: ["wire", "electrical"], shopIndex: 9 },
+  { name: "PVC Pipes (10 pack)", description: "1-inch 3m length.", price: 180, stock: 40, category: "Plumbing", rating: 4.5, reviews: 56, tags: ["pipes", "plumbing"], shopIndex: 9 },
+  { name: "AirPods Pro 2", description: "USB-C, noise cancelling.", price: 2800, stock: 12, category: "Accessories", rating: 4.8, reviews: 89, tags: ["airpods", "apple", "earbuds"], brand: "Apple", shopIndex: 10 },
+  { name: "Samsung Galaxy Watch 6", description: "Health tracking, Wear OS.", price: 3500, originalPrice: 4000, discount: 12, stock: 8, category: "Accessories", rating: 4.7, reviews: 45, tags: ["samsung", "smartwatch"], brand: "Samsung", shopIndex: 10 },
+  { name: "JBL Flip 6 Speaker", description: "IP67 waterproof BT speaker.", price: 950, stock: 20, category: "Electronics", rating: 4.6, reviews: 123, tags: ["jbl", "speaker"], brand: "JBL", shopIndex: 10 },
+  { name: "Fitbit Charge 6", description: "Fitness tracker with GPS.", price: 1800, stock: 10, category: "Accessories", rating: 4.5, reviews: 56, tags: ["fitbit", "fitness"], shopIndex: 10 },
+  { name: "Yoga Mat", description: "Non-slip 6mm.", price: 250, stock: 30, category: "Fitness", rating: 4.5, reviews: 89, tags: ["yoga", "mat", "fitness"], shopIndex: 11 },
+  { name: "Adjustable Dumbbells (pair)", description: "5-25kg.", price: 1200, stock: 10, category: "Gym Equipment", rating: 4.7, reviews: 34, tags: ["dumbbells", "gym"], shopIndex: 11 },
+  { name: "Running Shoes Nike", description: "Zoom Air lightweight.", price: 1800, stock: 18, category: "Shoes", rating: 4.6, reviews: 67, tags: ["nike", "running"], brand: "Nike", shopIndex: 11 },
+  { name: "Protein Powder (2kg)", description: "Whey isolate chocolate.", price: 450, stock: 25, category: "Nutrition", rating: 4.5, reviews: 78, tags: ["protein", "supplement"], shopIndex: 11 },
+  { name: "Baby Stroller", description: "Lightweight foldable.", price: 850, stock: 12, category: "Baby Products", rating: 4.7, reviews: 56, tags: ["stroller", "baby"], shopIndex: 12 },
+  { name: "Baby Formula (800g)", description: "Stage 1 infant formula.", price: 180, stock: 40, category: "Baby Care", rating: 4.8, reviews: 189, tags: ["formula", "baby"], shopIndex: 12 },
+  { name: "Baby Clothes Set (3-6m)", description: "5-piece cotton set.", price: 120, stock: 25, category: "Children Clothing", rating: 4.6, reviews: 78, tags: ["baby", "clothes"], shopIndex: 12 },
+  { name: "Diapers Large (50pc)", description: "Extra absorbent.", price: 220, stock: 50, category: "Baby Care", rating: 4.7, reviews: 234, tags: ["diapers", "baby"], shopIndex: 12 },
+  { name: "Baby Crib", description: "Solid wood with mattress.", price: 1500, stock: 5, category: "Nursery", rating: 4.8, reviews: 34, tags: ["crib", "baby"], shopIndex: 12 },
+  { name: "Engine Oil 5W-30 (5L)", description: "Synthetic API SN PLUS.", price: 350, stock: 30, category: "Oil", rating: 4.5, reviews: 89, tags: ["oil", "engine", "car"], shopIndex: 13 },
+  { name: "Car Battery 12V", description: "60Ah maintenance-free.", price: 800, stock: 15, category: "Car Parts", rating: 4.6, reviews: 67, tags: ["battery", "car"], shopIndex: 13 },
+  { name: "Car Floor Mats (set)", description: "Universal rubber.", price: 180, stock: 25, category: "Car Parts", rating: 4.4, reviews: 45, tags: ["mats", "car"], shopIndex: 13 },
+  { name: "Michelin Tyre 205/55R16", description: "All-season radial.", price: 1800, stock: 20, category: "Tyres", rating: 4.7, reviews: 56, tags: ["tyre", "michelin"], shopIndex: 13 },
+  { name: "Foundation (various shades)", description: "Long-lasting matte.", price: 280, stock: 30, category: "Cosmetics", rating: 4.6, reviews: 89, tags: ["foundation", "makeup"], shopIndex: 14 },
+  { name: "Lipstick Set (5 colors)", description: "Matte lipsticks.", price: 180, originalPrice: 220, discount: 18, stock: 25, category: "Cosmetics", rating: 4.5, reviews: 67, tags: ["lipstick", "makeup"], shopIndex: 14 },
+  { name: "Moisturizing Cream (200ml)", description: "Hydrating with SPF15.", price: 150, stock: 40, category: "Skincare", rating: 4.7, reviews: 123, tags: ["moisturizer", "skincare"], shopIndex: 14 },
+  { name: "Hair Growth Oil (100ml)", description: "Natural castor oil blend.", price: 120, stock: 35, category: "Haircare", rating: 4.6, reviews: 156, tags: ["hair-oil", "haircare"], shopIndex: 14 },
+  { name: "Dog Food (10kg)", description: "Premium chicken flavour.", price: 350, stock: 20, category: "Pet Food", rating: 4.5, reviews: 89, tags: ["dog-food", "pet"], shopIndex: 15 },
+  { name: "Cat Food (5kg)", description: "Complete fish formula.", price: 220, stock: 25, category: "Pet Food", rating: 4.6, reviews: 67, tags: ["cat-food", "pet"], shopIndex: 15 },
+  { name: "Dog Leash", description: "Adjustable nylon 1.5m.", price: 85, stock: 30, category: "Pet Accessories", rating: 4.4, reviews: 45, tags: ["leash", "dog"], shopIndex: 15 },
+  { name: "Infinix Hot 40", description: "6.78\" display, 48MP camera.", price: 1800, stock: 40, category: "Mobile Phones", rating: 4.3, reviews: 123, tags: ["infinix", "smartphone"], brand: "Infinix", shopIndex: 16 },
+  { name: "Phone Case iPhone 15", description: "Clear protective case.", price: 85, stock: 60, category: "Accessories", rating: 4.4, reviews: 234, tags: ["phone-case", "iphone"], shopIndex: 16 },
+  { name: "Screen Protector (3 pack)", description: "Tempered glass.", price: 45, stock: 100, category: "Accessories", rating: 4.5, reviews: 345, tags: ["screen-protector"], shopIndex: 16 },
+  { name: "Phone Charger Type-C", description: "Fast charging 1.5m.", price: 35, stock: 80, category: "Accessories", rating: 4.3, reviews: 189, tags: ["charger", "usb-c"], shopIndex: 16 },
 ];
 
-const FEED_POSTS_DATA = [
-  {
-    content: "🔥 NEW ARRIVAL! Samsung Galaxy A15 now in stock! Only K2,800 — that's K400 off!\n\n✅ 6.5\" Super AMOLED display\n✅ 50MP camera\n✅ 5000mAh battery\n\nVisit us at Soweto Market or order for delivery! 📱",
-    isPromotion: true,
-    locationId: "soweto",
-    product: { name: "Samsung Galaxy A15", price: 2800, originalPrice: 3200, discount: 12 },
-    shopIndex: 0,
-    likes: 24,
-  },
-  {
-    content: "Avocado season is here! 🥑 Fresh Hass avocados just K120 per dozen. Limited stock — first come first served!\n\nSourced from farms in Lusaka's peri-urban areas. Ripe and ready to eat.",
-    isPromotion: true,
-    locationId: "city-market",
-    product: { name: "Avocados (dozen)", price: 120, originalPrice: 150, discount: 20 },
-    shopIndex: 1,
-    likes: 31,
-  },
-  {
-    content: "Summer collection is live! 🌞 Floral dresses starting from just K480. Come to Munyaule Market and find your perfect look.\n\nWe have sizes 8-18. Free styling advice included! 👗✨",
-    isPromotion: true,
-    locationId: "munyaule",
-    product: { name: "Women's Floral Dress", price: 480 },
-    shopIndex: 2,
-    likes: 18,
-  },
-  {
-    content: "PS5 in stock! 🎮 Grab your PlayStation 5 for just K9,500. We also have FIFA 24 for K550 — bundle deal available!\n\n🎮 PS5 + FIFA 24 bundle: K9,800 (save K250)",
-    isPromotion: true,
-    locationId: "comesa",
-    product: { name: "PlayStation 5 Console", price: 9500 },
-    shopIndex: 4,
-    likes: 42,
-  },
-  {
-    content: "Just got a beautiful 3-seater sofa from HomeComfort Plus in Kamwala! The quality is amazing and the delivery was so smooth. Highly recommend! 🛋️\n\n#Pakalale #HomeDecor #HappyCustomer",
-    isPromotion: false,
-    locationId: "kamwala",
-    shopIndex: 3,
-    likes: 12,
-  },
-  {
-    content: "💊 HEALTH TIP: Vitamin C boosts your immune system! Our Vitamin C 1000mg is now 20% off — just K120 for 60 capsules.\n\n✅ Orange-flavoured\n✅ High potency\n✅ Supports immunity\n\nVisit PharmaCare Health at City Market!",
-    isPromotion: true,
-    locationId: "city-market",
-    product: { name: "Vitamin C 1000mg (60 caps)", price: 120, originalPrice: 150, discount: 20 },
-    shopIndex: 5,
-    likes: 56,
-  },
-  {
-    content: "🎮 GameZone has the new Nintendo Switch OLED in stock! K7,200 — perfect for portable gaming. Bring the kids, we have something for everyone!\n\n📍 COMESA Market\n⏰ Open until 10PM",
-    isPromotion: true,
-    locationId: "comesa",
-    product: { name: "Nintendo Switch OLED", price: 7200 },
-    shopIndex: 4,
-    likes: 38,
-  },
-  {
-    content: "Baby care essentials at PharmaCare! 🍼 We have diapers, formula, baby lotion and more. All genuine products with expiry dates verified.\n\nWalk-in or order via WhatsApp: +260 97 888 1234",
-    isPromotion: true,
-    locationId: "city-market",
-    product: { name: "Baby Diapers (Medium 40pc)", price: 180 },
-    shopIndex: 5,
-    likes: 29,
-  },
-  {
-    content: "HP Laptop just K12,000 at TechHub! 💻 Intel Core i5, 8GB RAM, 512GB SSD. Perfect for students and professionals.\n\nFree delivery in Lusaka for orders over K2,000.",
-    isPromotion: true,
-    locationId: "soweto",
-    product: { name: "HP Laptop 15s", price: 12000 },
-    shopIndex: 0,
-    likes: 45,
-  },
-  {
-    content: "Just picked up fresh mangoes from FreshBasket! 🥭 K65 for 3kg — so sweet and juicy. Best prices in Lusaka for sure.\n\nThank you Grace for the great service! 🙏",
-    isPromotion: false,
-    locationId: "city-market",
-    shopIndex: 1,
-    likes: 19,
-  },
-  {
-    content: "Standing fan for just K380 at HomeComfort Plus! 💨 Beat the heat this summer. 3 speed settings, oscillating function.\n\n📍 Kamwala Market\n🚚 Delivery available",
-    isPromotion: true,
-    locationId: "kamwala",
-    product: { name: 'Standing Fan 16"', price: 380 },
-    shopIndex: 3,
-    likes: 22,
-  },
-  {
-    content: "Blood pressure monitor now at PharmaCare for K650! 🩺 Digital, automatic, stores readings for 2 users. Clinically validated.\n\nYour health matters — check your BP regularly!",
-    isPromotion: true,
-    locationId: "city-market",
-    product: { name: "Blood Pressure Monitor", price: 650, originalPrice: 800, discount: 19 },
-    shopIndex: 5,
-    likes: 34,
-  },
-];
-
-const NOTIFICATION_TEMPLATES = [
-  { type: "deal", title: "Flash Sale Alert!", message: "TechHub Zambia is running a 24hr sale on all Samsung phones. Up to 25% off!", actionUrl: "/customer/deals" },
-  { type: "shop", title: "New Shop Nearby", message: "GameZone Zambia just listed 6 new gaming products. Check them out!", actionUrl: "/customer/locations" },
-  { type: "order", title: "Order Confirmed", message: "Your order from FreshBasket Market has been confirmed and is being prepared.", actionUrl: "/customer/deals" },
-  { type: "message", title: "New Message", message: "StyleVault Fashion replied to your inquiry about the floral dress.", actionUrl: "/customer/chat" },
-  { type: "review", title: "Rate Your Purchase", message: "How was your experience with TechHub Zambia? Leave a review!", actionUrl: "/customer/deals" },
-  { type: "system", title: "Welcome to Pakalale!", message: "Start exploring local shops in your area. Discover deals, connect with sellers, and support local businesses.", actionUrl: "/customer" },
+const CUSTOMER_NAMES = [
+  { firstName: "Memory", lastName: "Zulu", location: "Lusaka", interestedCategories: ["Mobile Phones", "Fashion", "Shoes"] },
+  { firstName: "Grace", lastName: "Mwamba", location: "Lusaka", interestedCategories: ["Fresh Vegetables", "Groceries", "Baby Care"] },
+  { firstName: "Patrick", lastName: "Banda", location: "Lusaka", interestedCategories: ["Electronics", "Gaming", "Laptops"] },
+  { firstName: "Chipo", lastName: "Phiri", location: "Lusaka", interestedCategories: ["Fashion", "Women's Wear", "Accessories"] },
+  { firstName: "Joseph", lastName: "Tembo", location: "Lusaka", interestedCategories: ["Construction", "Hardware", "Tools"] },
+  { firstName: "Sarah", lastName: "Chileshe", location: "Lusaka", interestedCategories: ["Baby Care", "Health", "Vitamins"] },
+  { firstName: "David", lastName: "Mwila", location: "Lusaka", interestedCategories: ["Sports Equipment", "Gym Gear", "Shoes"] },
+  { firstName: "Agnes", lastName: "Bwalya", location: "Lusaka", interestedCategories: ["Cosmetics", "Skincare", "Fashion"] },
+  { firstName: "Henry", lastName: "Ngoma", location: "Lusaka", interestedCategories: ["Car Parts", "Automotive", "Electronics"] },
+  { firstName: "Lilian", lastName: "Chipanga", location: "Lusaka", interestedCategories: ["Books", "Stationery", "School Supplies"] },
+  { firstName: "Michael", lastName: "Sinkamba", location: "Lusaka", interestedCategories: ["Mobile Phones", "Gadgets", "Tech"] },
+  { firstName: "Ruth", lastName: "Mutale", location: "Lusaka", interestedCategories: ["Pet Food", "Fresh Food"] },
+  { firstName: "Andrew", lastName: "Kapata", location: "Lusaka", interestedCategories: ["Sneakers", "Streetwear", "Sportswear"] },
+  { firstName: "Esther", lastName: "Nsenga", location: "Lusaka", interestedCategories: ["Furniture", "Home Decor", "Appliances"] },
+  { firstName: "Brian", lastName: "Mwape", location: "Lusaka", interestedCategories: ["Laptops", "Gaming", "Electronics"] },
+  { firstName: "Catherine", lastName: "Lungu", location: "Lusaka", interestedCategories: ["Fashion", "Accessories"] },
+  { firstName: "Emmanuel", lastName: "Chanda", location: "Lusaka", interestedCategories: ["Hardware", "Construction"] },
+  { firstName: "Juliet", lastName: "Mweemba", location: "Lusaka", interestedCategories: ["Baby Products", "Children Clothing"] },
+  { firstName: "Thomas", lastName: "Mpundu", location: "Lusaka", interestedCategories: ["Gaming", "Consoles"] },
+  { firstName: "Naomi", lastName: "Zimba", location: "Lusaka", interestedCategories: ["Skincare", "Cosmetics", "Health"] },
 ];
 
 // ── Main Seed Function ──
@@ -534,14 +322,16 @@ async function seed() {
     await mongoose.connect(MONGODB_URI);
     console.log("✅ Connected to MongoDB\n");
 
+    const db = mongoose.connection.db!;
+
     // Drop existing collections
-    const collections = ["users", "shops", "products", "feedposts", "orders", "locations", "chats", "messages", "notifications"];
+    const collections = ["users", "shops", "products", "feedposts", "orders", "locations", "chats", "messages", "notifications", "demandrecords", "searchhistories", "productviews", "feedevents"];
     for (const coll of collections) {
-      await mongoose.connection.db!.dropCollection(coll).catch(() => {});
+      await db.dropCollection(coll).catch(() => {});
     }
     console.log("🗑️  Dropped existing collections\n");
 
-    // Create models
+    // Register models
     const User = mongoose.models.User || mongoose.model("User", UserSchema);
     const Shop = mongoose.models.Shop || mongoose.model("Shop", ShopSchema);
     const Product = mongoose.models.Product || mongoose.model("Product", ProductSchema);
@@ -551,252 +341,268 @@ async function seed() {
     const Chat = mongoose.models.Chat || mongoose.model("Chat", ChatSchema);
     const Message = mongoose.models.Message || mongoose.model("Message", ChatMessageSchema);
     const Notification = mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);
+    const DemandRecord = mongoose.models.DemandRecord || mongoose.model("DemandRecord", DemandRecordSchema);
+    const SearchHistory = mongoose.models.SearchHistory || mongoose.model("SearchHistory", SearchHistorySchema);
+    const ProductView = mongoose.models.ProductView || mongoose.model("ProductView", ProductViewSchema);
 
-    // 1. Seed Locations
-    console.log("📍 Seeding locations...");
-    const locations = await Location.insertMany(LOCATIONS);
-    const locationMap = new Map(locations.map((l) => [l.slug, l._id]));
-    console.log(`   ✅ ${locations.length} locations created\n`);
-
-    // 2. Create Users
-    console.log("👤 Creating users...");
     const hashedPassword = await bcrypt.hash("password123", 12);
 
-    const shopOwners = [];
+    // 1. Locations
+    console.log("📍 Seeding locations...");
+    const locations = await Location.insertMany(LOCATIONS);
+    console.log(`   ✅ ${locations.length} locations\n`);
+
+    // 2. Shop Owners (BULK)
+    console.log("👤 Creating shop owners...");
     const shopOwnerNames = [
-      { firstName: "John", lastName: "Mwila" },     // TechHub
-      { firstName: "Grace", lastName: "Phiri" },     // FreshBasket
-      { firstName: "Patricia", lastName: "Banda" },  // StyleVault
-      { firstName: "David", lastName: "Tembo" },     // HomeComfort
-      { firstName: "Samuel", lastName: "Chileshe" }, // GameZone
-      { firstName: "Nancy", lastName: "Chanda" },    // PharmaCare
+      { firstName: "John", lastName: "Mwila" }, { firstName: "Grace", lastName: "Phiri" },
+      { firstName: "Patricia", lastName: "Banda" }, { firstName: "David", lastName: "Tembo" },
+      { firstName: "Samuel", lastName: "Chileshe" }, { firstName: "Nancy", lastName: "Chanda" },
+      { firstName: "Kevin", lastName: "Mweemba" }, { firstName: "Alice", lastName: "Nkonde" },
+      { firstName: "Peter", lastName: "Chilufya" }, { firstName: "Joyce", lastName: "Sakala" },
+      { firstName: "Daniel", lastName: "Mumbi" }, { firstName: "Rachel", lastName: "Kapembwa" },
+      { firstName: "Frank", lastName: "Mwale" }, { firstName: "Linda", lastName: "Phiri" },
+      { firstName: "Charles", lastName: "Zulu" }, { firstName: "Diana", lastName: "Mwamba" },
+      { firstName: "Victor", lastName: "Chewe" },
     ];
+    const shopOwners = await User.insertMany(SHOP_DATA.map((sd, i) => ({
+      email: `shop${i + 1}@pakalale.com`, password: hashedPassword,
+      firstName: shopOwnerNames[i].firstName, lastName: shopOwnerNames[i].lastName,
+      role: "shop_owner" as const, isVerified: i < 6,
+      location: LOCATIONS[i % LOCATIONS.length].name, phone: sd.contact.phone,
+    })));
+    console.log(`   ✅ ${shopOwners.length} shop owners\n`);
 
-    for (let i = 0; i < 6; i++) {
-      const user = await User.create({
-        email: `shop${i + 1}@pakalale.com`,
-        password: hashedPassword,
-        firstName: shopOwnerNames[i].firstName,
-        lastName: shopOwnerNames[i].lastName,
-        role: "shop_owner",
-        isVerified: i < 3,
-        location: LOCATIONS[i % LOCATIONS.length].name,
-        phone: SHOP_DATA[i].contact.phone,
-        bio: `Owner of ${SHOP_DATA[i].name}`,
-      });
-      shopOwners.push(user);
-      console.log(`   ✅ ${user.firstName} ${user.lastName} (${user.email}) — shop_owner`);
-    }
+    // 3. Customers (BULK)
+    console.log("👥 Creating customers...");
+    const customers = await User.insertMany(CUSTOMER_NAMES.map((c, i) => ({
+      email: `customer${i + 1}@pakalale.com`, password: hashedPassword,
+      firstName: c.firstName, lastName: c.lastName,
+      role: "customer" as const, isVerified: true, location: c.location,
+      phone: `+260 9${Math.floor(Math.random() * 9) + 1} ${String(Math.floor(Math.random() * 9000000) + 1000000)}`,
+      interestedCategories: c.interestedCategories,
+      locationCoordinates: { lat: -15.38 + Math.random() * 0.08, lng: 28.26 + Math.random() * 0.08 },
+    })));
+    console.log(`   ✅ ${customers.length} customers\n`);
 
-    const customer = await User.create({
-      email: "customer@pakalale.com",
-      password: hashedPassword,
-      firstName: "Memory",
-      lastName: "Zulu",
-      role: "customer",
-      isVerified: true,
-      location: "Lusaka",
-      phone: "+260 98 111 2233",
-      bio: "Love shopping for deals on Pakalale!",
-    });
-    console.log(`   ✅ ${customer.firstName} ${customer.lastName} (${customer.email}) — customer`);
-    console.log();
-
-    // 3. Create Shops
+    // 4. Shops (BULK)
     console.log("🏪 Creating shops...");
-    const shops: Array<{ _id: mongoose.Types.ObjectId; name: string; locationId?: string; [key: string]: unknown }> = [];
-    const shopStatuses = ["verified", "verified", "verified", "pending", "pending", "pending"];
-    for (let i = 0; i < SHOP_DATA.length; i++) {
-      const shop = await Shop.create({
-        ...SHOP_DATA[i],
-        ownerId: shopOwners[i]._id,
-        status: shopStatuses[i],
-      });
-      shops.push(shop);
-      console.log(`   ✅ ${shop.name} (${LOCATIONS[i % LOCATIONS.length].name})`);
-    }
-    console.log();
+    const shops = await Shop.insertMany(SHOP_DATA.map((sd, i) => ({
+      ...sd, ownerId: shopOwners[i]._id, status: i < 10 ? "verified" : "pending",
+    })));
+    console.log(`   ✅ ${shops.length} shops\n`);
 
-    // 4. Create Products
+    // 5. Products (BULK)
     console.log("📦 Creating products...");
-    const products = [];
-    for (const pd of PRODUCTS_DATA) {
-      const product = await Product.create({
-        name: pd.name,
-        description: pd.description,
-        price: pd.price,
-        originalPrice: pd.originalPrice,
-        discount: pd.discount,
-        stock: pd.stock,
-        category: pd.category,
-        shopId: shops[pd.shopIndex]._id,
-        rating: pd.rating,
-        reviews: pd.reviews,
-        tags: pd.tags || [],
-        isAvailable: pd.stock > 0,
-        images: [],
-        views: Math.floor(Math.random() * 200) + 10,
-      });
-      products.push(product);
-    }
-    console.log(`   ✅ ${products.length} products created`);
-    console.log();
+    const products = await Product.insertMany(ALL_PRODUCTS.map((pd) => ({
+      name: pd.name, description: pd.description, price: pd.price,
+      originalPrice: pd.originalPrice, discount: pd.discount, stock: pd.stock,
+      category: pd.category, shopId: shops[pd.shopIndex]._id,
+      rating: pd.rating, reviews: pd.reviews, tags: pd.tags,
+      brand: pd.brand, color: pd.color, isAvailable: pd.stock > 0, images: [] as string[],
+      views: Math.floor(Math.random() * 500) + 10,
+      demandScore: Math.floor(Math.random() * 50),
+    })));
+    console.log(`   ✅ ${products.length} products\n`);
 
-    // 5. Create Feed Posts
+    // 6. Feed Posts (BULK)
     console.log("📝 Creating feed posts...");
-    for (let i = 0; i < FEED_POSTS_DATA.length; i++) {
-      const fp = FEED_POSTS_DATA[i];
-      const shop = shops[fp.shopIndex];
-      const owner = shopOwners[fp.shopIndex];
+    const feedPostDocs: Record<string, unknown>[] = [];
+    // Shop posts
+    const shopPostData = [
+      { content: "🔥 NEW ARRIVAL! Samsung Galaxy A15 now in stock! Only K2,800 — K400 off! 📱", isPromotion: true, locationId: "soweto", shopIndex: 0, postType: "promotion", likes: 24, product: { name: "Samsung Galaxy A15", price: 2800, originalPrice: 3200, discount: 12 } },
+      { content: "Avocado season! 🥑 Fresh Hass avocados K120/dozen. Limited stock!", isPromotion: true, locationId: "city-market", shopIndex: 1, postType: "promotion", likes: 31, product: { name: "Avocados (dozen)", price: 120 } },
+      { content: "Summer collection live! 🌞 Floral dresses from K480 at Munyaule Market. 👗", isPromotion: true, locationId: "munyaule", shopIndex: 2, postType: "promotion", likes: 18, product: { name: "Women's Floral Dress", price: 480 } },
+      { content: "PS5 in stock! 🎮 K9,500. FIFA 24 bundle: K9,800! 🎮", isPromotion: true, locationId: "comesa", shopIndex: 4, postType: "promotion", likes: 42, product: { name: "PlayStation 5 Console", price: 9500 } },
+      { content: "💊 Vitamin C 20% off! K120 for 60 capsules. Visit PharmaCare!", isPromotion: true, locationId: "city-market", shopIndex: 5, postType: "promotion", likes: 56, product: { name: "Vitamin C 1000mg (60 caps)", price: 120, originalPrice: 150, discount: 20 } },
+      { content: "🎮 Nintendo Switch OLED K7,200 at GameZone! 📍 COMESA Market", isPromotion: true, locationId: "comesa", shopIndex: 4, postType: "product_arrival", likes: 38, product: { name: "Nintendo Switch OLED", price: 7200 } },
+      { content: "🍼 Baby care at PharmaCare! Diapers, formula, lotion. WhatsApp us!", isPromotion: true, locationId: "city-market", shopIndex: 5, postType: "promotion", likes: 29 },
+      { content: "💻 HP Laptop K12,000 at TechHub! Free delivery over K2,000.", isPromotion: true, locationId: "soweto", shopIndex: 0, postType: "promotion", likes: 45, product: { name: "HP Laptop 15s", price: 12000 } },
+      { content: "💨 Standing fan K380 at HomeComfort Plus! Beat the heat!", isPromotion: true, locationId: "kamwala", shopIndex: 3, postType: "promotion", likes: 22, product: { name: "Standing Fan 16\"", price: 380 } },
+      { content: "🩺 Blood pressure monitor K650 at PharmaCare! Digital, automatic.", isPromotion: true, locationId: "city-market", shopIndex: 5, postType: "price_drop", likes: 34, product: { name: "Blood Pressure Monitor", price: 650, originalPrice: 800, discount: 19 } },
+      { content: "🆕 Ankara print dresses just landed at StyleVault! From K380 🌍", isPromotion: false, locationId: "munyaule", shopIndex: 2, postType: "product_arrival", likes: 21, product: { name: "Women's Ankara Print Dress", price: 380 } },
+      { content: "📚 New textbooks at BookWorld! Don't wait until school opens!", isPromotion: false, locationId: "city-market", shopIndex: 7, postType: "product_arrival", likes: 16 },
+      { content: "🎮 GTA V PS5 now K450 at GameZone! 📍 COMESA", isPromotion: false, locationId: "comesa", shopIndex: 4, postType: "product_arrival", likes: 33, product: { name: "GTA V (PS5)", price: 450 } },
+      { content: "💰 Nike Air Max 270 now K2,200 (was K2,500) at Urban Sole! 👟", isPromotion: true, locationId: "mandahill", shopIndex: 6, postType: "price_drop", likes: 38, product: { name: "Nike Air Max 270", price: 2200, originalPrice: 2500, discount: 12 } },
+      { content: "🔥 Protein powder K450 at FitZone! 💪 Olympia Market", isPromotion: true, locationId: "olympia", shopIndex: 11, postType: "price_drop", likes: 28 },
+      { content: "📱 Infinix Hot 40 K1,800 at MobileZone! 📍 Soweto Market", isPromotion: true, locationId: "soweto", shopIndex: 16, postType: "price_drop", likes: 41, product: { name: "Infinix Hot 40", price: 1800 } },
+      { content: "🌍 Pakalale now has 8 trading areas! Support local businesses! 🇿🇲", isPromotion: false, locationId: "soweto", shopIndex: 0, postType: "shop_announcement", likes: 45 },
+      { content: "🏋️ FitZone clearance! Yoga mats K250, Dumbbells K1,200. 📍 Olympia", isPromotion: true, locationId: "olympia", shopIndex: 11, postType: "promotion", likes: 19 },
+      { content: "💄 LushBeauty new! Foundation K280, Lipstick sets K180. 📍 Mandahill", isPromotion: true, locationId: "mandahill", shopIndex: 14, postType: "promotion", likes: 26 },
+      { content: "🚗 AutoZone! Engine oil K350, Battery K800. 📍 COMESA 🔧", isPromotion: true, locationId: "comesa", shopIndex: 13, postType: "promotion", likes: 14 },
+    ];
+    for (const fp of shopPostData) {
       const product = fp.product ? products.find((p) => p.name === fp.product!.name) : null;
-
-      const likedBy = [customer._id];
-      if (i < FEED_POSTS_DATA.length - 1) likedBy.push(shopOwners[(fp.shopIndex + 1) % 5]._id);
-
-      await FeedPost.create({
-        content: fp.content,
-        authorId: owner._id,
-        locationId: fp.locationId,
-        likes: likedBy,
-        comments: i === 0
-          ? [{ authorId: customer._id, authorName: "Memory Zulu", content: "Great deal! Is this still available?" }]
-          : [],
-        shares: Math.floor(Math.random() * 10),
-        isPromotion: fp.isPromotion,
-        product: product
-          ? { name: product.name, price: product.price, originalPrice: product.originalPrice, discount: product.discount, image: "", shopId: shop._id }
-          : undefined,
-        images: [],
+      feedPostDocs.push({
+        content: fp.content, authorId: shopOwners[fp.shopIndex]._id,
+        locationId: fp.locationId, isPromotion: fp.isPromotion, postType: fp.postType,
+        autoGenerated: false, images: [] as string[],
+        likes: Array.from({ length: Math.min(fp.likes, 5) }, () => customers[Math.floor(Math.random() * customers.length)]._id),
+        comments: [], shares: Math.floor(Math.random() * 15),
+        product: product ? { name: product.name, price: product.price, originalPrice: (product as Record<string, unknown>).originalPrice, discount: (product as Record<string, unknown>).discount, image: "", shopId: shops[fp.shopIndex]._id } : undefined,
       });
     }
-    console.log(`   ✅ ${FEED_POSTS_DATA.length} feed posts created`);
-    console.log();
+    // Customer posts
+    const custPostData = [
+      { authorIdx: 0, content: "Looking for black Nike Air Force 1, size 42. Anyone? 👟", postType: "customer_request", locationId: "mandahill" },
+      { authorIdx: 3, content: "Good quality suit for wedding? Budget K1,500. 👔", postType: "customer_request", locationId: "munyaule" },
+      { authorIdx: 2, content: "Laptop under K8,000 for university? 💻", postType: "customer_request", locationId: "soweto" },
+      { authorIdx: 5, content: "Where to find organic vegetables? 🥬", postType: "customer_request", locationId: "city-market" },
+      { authorIdx: 14, content: "Gaming mouse under K500? 🖱️🎮", postType: "customer_request", locationId: "comesa" },
+      { authorIdx: 5, content: "Baby formula for 3-month-old? Best prices? 🍼", postType: "customer_request", locationId: "city-market" },
+      { authorIdx: 1, content: "Fresh tomatoes from FreshBasket — K85 for 5kg! 🍅 Best quality!", postType: "customer_review", locationId: "city-market" },
+      { authorIdx: 6, content: "FitZone has amazing gym equipment! Got my dumbbells. 💪 #FitZone", postType: "customer_review", locationId: "olympia" },
+      { authorIdx: 7, content: "LushBeauty foundation is 🔥! K280 worth it. 💄", postType: "customer_review", locationId: "mandahill" },
+      { authorIdx: 12, content: "Urban Sole is the real deal! AF1 K1,800 authentic! 👟", postType: "customer_review", locationId: "mandahill" },
+      { authorIdx: 13, content: "HomeComfort delivered my bed frame. Excellent quality! 🛏️", postType: "customer_review", locationId: "kamwala" },
+      { authorIdx: 8, content: "AutoZone saved me! Oil and battery check done. 🚗", postType: "customer_review", locationId: "comesa" },
+    ];
+    for (const cp of custPostData) {
+      feedPostDocs.push({
+        content: cp.content, authorId: customers[cp.authorIdx]._id,
+        locationId: cp.locationId, isPromotion: false, postType: cp.postType,
+        autoGenerated: false, images: [] as string[],
+        likes: Array.from({ length: Math.floor(Math.random() * 20) + 3 }, () => customers[Math.floor(Math.random() * customers.length)]._id),
+        comments: [], shares: Math.floor(Math.random() * 5),
+      });
+    }
+    const feedPosts = await FeedPost.insertMany(feedPostDocs);
+    console.log(`   ✅ ${feedPosts.length} feed posts\n`);
 
-    // 6. Create Orders
-    console.log("🛒 Creating sample orders...");
-    const orderStatuses: Array<"completed" | "pending" | "confirmed" | "preparing"> = ["completed", "completed", "pending", "confirmed", "preparing", "completed"];
-    const paymentMethods = ["Mobile Money", "Cash", "Bank Transfer", "Mobile Money", "Cash", "Cash"];
-    let orderCount = 0;
-    for (let i = 0; i < 15; i++) {
+    // 7. Demand Records (BULK)
+    console.log("📢 Creating demand records...");
+    const demandData = [
+      { authorIdx: 0, query: "Nike Air Force 1 size 42 black", locationId: "mandahill", intent: { productType: "Shoes", brand: "Nike", color: "black" } },
+      { authorIdx: 2, query: "laptop under K8000 for university", locationId: "soweto", intent: { productType: "Laptops", priceMax: 8000 } },
+      { authorIdx: 3, query: "black dress for wedding under K500", locationId: "munyaule", intent: { productType: "Women's Wear", color: "black", priceMax: 500 } },
+      { authorIdx: 5, query: "baby formula stage 1", locationId: "city-market", intent: { productType: "Baby Care" } },
+      { authorIdx: 7, query: "moisturizing cream for dry skin", locationId: "mandahill", intent: { productType: "Skincare" } },
+      { authorIdx: 14, query: "gaming mouse under K500", locationId: "comesa", intent: { productType: "PC Gaming", priceMax: 500 } },
+      { authorIdx: 1, query: "fresh organic vegetables", locationId: "city-market", intent: { productType: "Vegetables" } },
+      { authorIdx: 9, query: "mathematics textbook grade 12", locationId: "city-market", intent: { productType: "School Supplies" } },
+      { authorIdx: 12, query: "white sneakers size 10", locationId: "mandahill", intent: { productType: "Shoes", color: "white" } },
+      { authorIdx: 15, query: "sofa set under K5000", locationId: "kamwala", intent: { productType: "Living Room", priceMax: 5000 } },
+      { authorIdx: 4, query: "cement 50kg bag", locationId: "kamwala", intent: { productType: "Construction" } },
+      { authorIdx: 11, query: "dog food 10kg", locationId: "olympia", intent: { productType: "Pet Food" } },
+      { authorIdx: 10, query: "wireless earbuds under K500", locationId: "soweto", intent: { productType: "Accessories", priceMax: 500 } },
+      { authorIdx: 8, query: "car battery 12V", locationId: "comesa", intent: { productType: "Car Parts" } },
+      { authorIdx: 17, query: "baby stroller foldable", locationId: "city-market", intent: { productType: "Baby Products" } },
+    ];
+    const demands = await DemandRecord.insertMany(demandData.map((dq) => ({
+      customerId: customers[dq.authorIdx]._id, query: dq.query,
+      parsedIntent: dq.intent, locationId: dq.locationId, status: "active" as const,
+      viewCount: Math.floor(Math.random() * 50),
+    })));
+    console.log(`   ✅ ${demands.length} demand records\n`);
+
+    // 8. Search History (BULK)
+    console.log("🔍 Creating search history...");
+    const searchQueries = ["nike air force 1", "samsung galaxy", "laptop under 10000", "black shoes", "fresh vegetables", "baby diapers", "gaming mouse", "sofa", "iphone 15", "vitamin c", "cement", "dog food", "wireless earbuds", "moisturizer", "yoga mat", "cooking oil", "playstation 5", "running shoes", "dictionary", "car battery", "nike black", "tecno phone", "headphones wireless", "formal suit", "baby formula", "protein powder", "face cream", "school textbooks"];
+    const searchDocs = Array.from({ length: 150 }, (_, i) => ({
+      userId: customers[Math.floor(Math.random() * customers.length)]._id,
+      query: searchQueries[Math.floor(Math.random() * searchQueries.length)],
+      resultCount: Math.floor(Math.random() * 30) + 1,
+      locationId: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].slug,
+      timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
+    }));
+    await SearchHistory.insertMany(searchDocs);
+    console.log(`   ✅ 150 search history records\n`);
+
+    // 9. Product Views (BULK)
+    console.log("👁️ Creating product views...");
+    const viewDocs = Array.from({ length: 500 }, () => {
+      const prod = products[Math.floor(Math.random() * products.length)];
+      const hasUser = Math.random() > 0.3;
+      return {
+        productId: prod._id,
+        userId: hasUser ? customers[Math.floor(Math.random() * customers.length)]._id : undefined,
+        source: ["search", "feed", "shop_page", "direct", "recommendation"][Math.floor(Math.random() * 5)],
+        timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+      };
+    });
+    await ProductView.insertMany(viewDocs);
+    console.log(`   ✅ 500 product views\n`);
+
+    // 10. Orders (BULK)
+    console.log("🛒 Creating orders...");
+    const orderStatuses = ["completed", "completed", "pending", "confirmed", "preparing", "completed", "completed", "ready"];
+    const orderDocs: Record<string, unknown>[] = [];
+    for (let i = 0; i < 40; i++) {
       const shopIdx = i % shops.length;
       const shopProducts = products.filter((p) => p.shopId.toString() === shops[shopIdx]._id.toString());
       if (shopProducts.length === 0) continue;
-
       const numItems = Math.floor(Math.random() * 3) + 1;
-      const orderItems: Array<{ productId: mongoose.Types.ObjectId; quantity: number; price: number }> = [];
+      const items: { productId: mongoose.Types.ObjectId; quantity: number; price: number }[] = [];
       let total = 0;
-
       for (let j = 0; j < numItems; j++) {
         const prod = shopProducts[Math.floor(Math.random() * shopProducts.length)];
         const qty = Math.floor(Math.random() * 3) + 1;
-        orderItems.push({ productId: prod._id, quantity: qty, price: prod.price });
+        items.push({ productId: prod._id, quantity: qty, price: prod.price });
         total += prod.price * qty;
       }
-
-      await Order.create({
-        customerId: customer._id,
-        shopId: shops[shopIdx]._id,
-        items: orderItems,
-        status: orderStatuses[i % orderStatuses.length],
-        total,
-        paymentMethod: paymentMethods[i % paymentMethods.length],
+      orderDocs.push({
+        customerId: customers[Math.floor(Math.random() * customers.length)]._id,
+        shopId: shops[shopIdx]._id, items, status: orderStatuses[i % orderStatuses.length],
+        total, paymentMethod: ["Mobile Money", "Cash", "Bank Transfer"][Math.floor(Math.random() * 3)],
       });
-      orderCount++;
     }
-    console.log(`   ✅ ${orderCount} orders created`);
-    console.log();
+    await Order.insertMany(orderDocs);
+    console.log(`   ✅ ${orderDocs.length} orders\n`);
 
-    // 7. Create Chats & Messages
+    // 11. Chats & Messages
     console.log("💬 Creating chats...");
-    const chat1 = await Chat.create({
-      type: "deal",
-      participants: [customer._id, shopOwners[0]._id],
-      dealInfo: {
-        productName: "iPhone 15 Pro Max",
-        initialPrice: 18500,
-        finalPrice: 17500,
-        status: "negotiating",
-      },
-      lastMessageTime: new Date(),
-      isActive: true,
-    });
-
-    const chatMessages = [
-      { senderId: customer._id, senderName: `${customer.firstName} ${customer.lastName}`, senderRole: "customer" as const, content: "Hello! Is the iPhone 15 Pro Max still available?" },
-      { senderId: shopOwners[0]._id, senderName: `${shopOwnerNames[0].firstName} ${shopOwnerNames[0].lastName}`, senderRole: "shop_owner" as const, content: "Yes it is! We have it in Space Black and Natural Titanium. K18,500." },
-      { senderId: customer._id, senderName: `${customer.firstName} ${customer.lastName}`, senderRole: "customer" as const, content: "Can you do K17,000? I'm ready to pay today." },
-      { senderId: shopOwners[0]._id, senderName: `${shopOwnerNames[0].firstName} ${shopOwnerNames[0].lastName}`, senderRole: "shop_owner" as const, content: "I can do K17,500 — that's my best price. It includes a free screen protector and case!" },
-      { senderId: customer._id, senderName: `${customer.firstName} ${customer.lastName}`, senderRole: "customer" as const, content: "Deal! I'll come pick it up tomorrow morning. Which color should I reserve?" },
-      { senderId: shopOwners[0]._id, senderName: `${shopOwnerNames[0].firstName} ${shopOwnerNames[0].lastName}`, senderRole: "shop_owner" as const, content: "I'd recommend the Natural Titanium — it's the most popular. I'll hold one for you. See you tomorrow!" },
+    const chatPairs = [
+      { ci: 0, si: 0, type: "deal", product: "iPhone 15 Pro Max" },
+      { ci: 1, si: 1, type: "general", product: null },
+      { ci: 2, si: 4, type: "deal", product: "PlayStation 5 Console" },
+      { ci: 3, si: 6, type: "general", product: null },
+      { ci: 0, si: 5, type: "general", product: null },
     ];
+    for (const cp of chatPairs) {
+      const cust = customers[cp.ci], owner = shopOwners[cp.si];
+      const chat = await Chat.create({ type: cp.type, participants: [cust._id, owner._id], dealInfo: cp.product ? { productName: cp.product, initialPrice: cp.product === "iPhone 15 Pro Max" ? 18500 : 9500, finalPrice: cp.product === "iPhone 15 Pro Max" ? 17500 : 9000, status: "negotiating" } : undefined, lastMessageTime: new Date(), isActive: true });
+      const msgs = [
+        { chatId: chat._id, senderId: cust._id, senderName: `${cust.firstName} ${cust.lastName}`, senderRole: "customer", content: `Hello! Is ${cp.product || "the product"} still available?`, timestamp: new Date(Date.now() - 3600000 * 2), isRead: true, readBy: [] as mongoose.Types.ObjectId[] },
+        { chatId: chat._id, senderId: owner._id, senderName: `${owner.firstName} ${owner.lastName}`, senderRole: "shop_owner", content: "Yes! Come visit us.", timestamp: new Date(Date.now() - 3600000), isRead: true, readBy: [] as mongoose.Types.ObjectId[] },
+      ];
+      await Message.insertMany(msgs);
+    }
+    console.log(`   ✅ ${chatPairs.length} chats\n`);
 
-    const lastMsg = await Message.create(
-      chatMessages.map((m) => ({ ...m, chatId: chat1._id, timestamp: new Date(Date.now() - Math.random() * 3600000), isRead: true, readBy: [] }))
-    );
-    await Chat.findByIdAndUpdate(chat1._id, { lastMessage: lastMsg[lastMsg.length - 1]._id, lastMessageTime: new Date() });
-
-    // Second chat
-    const chat2 = await Chat.create({
-      type: "general",
-      participants: [customer._id, shopOwners[1]._id],
-      lastMessageTime: new Date(Date.now() - 3600000),
-      isActive: true,
-    });
-
-    await Message.create([
-      { chatId: chat2._id, senderId: customer._id, senderName: `${customer.firstName} ${customer.lastName}`, senderRole: "customer", content: "Do you have organic tomatoes?", timestamp: new Date(Date.now() - 7200000), isRead: true, readBy: [] },
-      { chatId: chat2._id, senderId: shopOwners[1]._id, senderName: `${shopOwnerNames[1].firstName} ${shopOwnerNames[1].lastName}`, senderRole: "shop_owner", content: "Yes! We get them fresh every morning from farms in Chilanga. K85 for 5kg.", timestamp: new Date(Date.now() - 3600000), isRead: true, readBy: [] },
-    ]);
-
-    console.log("   ✅ 2 chats with messages created");
-    console.log();
-
-    // 8. Create Notifications for customer
+    // 12. Notifications (BULK)
     console.log("🔔 Creating notifications...");
-    for (const nt of NOTIFICATION_TEMPLATES) {
-      await Notification.create({
-        userId: customer._id,
-        type: nt.type,
-        title: nt.title,
-        message: nt.message,
-        isRead: false,
-        actionUrl: nt.actionUrl,
-      });
-    }
-    // Add some for shop owners
-    for (let i = 0; i < 3; i++) {
-      await Notification.create({
-        userId: shopOwners[i]._id,
-        type: "order",
-        title: "New Order Received",
-        message: `You have a new order from Memory Zulu!`,
-        isRead: false,
-        actionUrl: "/shop/orders",
-      });
-    }
-    console.log(`   ✅ ${NOTIFICATION_TEMPLATES.length + 3} notifications created`);
-    console.log();
+    const notifDocs = [
+      { userId: customers[0]._id, type: "system", title: "Welcome to Pakalale! 🎉", message: "Discover local shops and deals!", actionUrl: "/customer" },
+      { userId: customers[0]._id, type: "shop", title: "New Shop Nearby", message: "Urban Sole has 7 new sneaker styles!", actionUrl: "/customer/locations" },
+      { userId: customers[0]._id, type: "deal", title: "Flash Sale Alert! 🔥", message: "TechHub: Samsung phones up to 25% off!", actionUrl: "/customer/deals" },
+      { userId: customers[0]._id, type: "demand", title: "Your Request Has Views 👀", message: "3 shops saw your Nike AF1 request.", actionUrl: "/customer/deals" },
+      { userId: customers[0]._id, type: "order", title: "Order Confirmed ✅", message: "FreshBasket order confirmed.", actionUrl: "/customer/deals" },
+      { userId: customers[0]._id, type: "message", title: "New Message 💬", message: "TechHub replied about iPhone 15.", actionUrl: "/customer/chat" },
+      { userId: customers[0]._id, type: "search_alert", title: "Price Drop 📉", message: "Nike Air Max 270 now K2,200!", actionUrl: "/customer/locations" },
+      { userId: customers[0]._id, type: "review", title: "Rate Your Purchase ⭐", message: "How was TechHub? Leave a review!", actionUrl: "/customer/deals" },
+      ...Array.from({ length: 4 }, (_, i) => ({ userId: customers[i + 1]._id, type: "system" as const, title: "Welcome to Pakalale! 🎉", message: "Explore local shops!", actionUrl: "/customer" })),
+    ];
+    await Notification.insertMany(notifDocs);
+    console.log(`   ✅ ${notifDocs.length} notifications\n`);
 
-    // 9. Update location shopCount and userCount
+    // 13. Update location stats
     console.log("📊 Updating location stats...");
     for (const loc of locations) {
-      const locShopCount = await Shop.countDocuments({ locationId: loc.slug });
-      const locUserCount = await User.countDocuments({ location: loc.name });
-      await Location.findByIdAndUpdate(loc._id, { shopCount: locShopCount, userCount: locUserCount + locShopCount });
-      console.log(`   ✅ ${loc.name}: ${locShopCount} shops, ${locUserCount + locShopCount} users`);
+      const shopCount = await Shop.countDocuments({ locationId: loc.slug });
+      const userCount = await User.countDocuments({ location: loc.name, role: "customer" });
+      await Location.findByIdAndUpdate(loc._id, { shopCount, userCount: userCount + shopCount });
     }
-    console.log();
+    console.log("   ✅ Location stats updated\n");
 
-    console.log("🎉 Seed completed successfully!\n");
+    console.log("🎉 Seed completed!\n");
     console.log("📋 Login credentials:");
-    console.log("   Customer:  customer@pakalale.com / password123");
-    console.log("   Shop 1:    shop1@pakalale.com / password123 (TechHub Zambia)");
-    console.log("   Shop 2:    shop2@pakalale.com / password123 (FreshBasket Market)");
-    console.log("   Shop 3:    shop3@pakalale.com / password123 (StyleVault Fashion)");
-    console.log("   Shop 4:    shop4@pakalale.com / password123 (HomeComfort Plus)");
-    console.log("   Shop 5:    shop5@pakalale.com / password123 (GameZone Zambia)");
-    console.log("   Shop 6:    shop6@pakalale.com / password123 (PharmaCare Health)");
-    console.log();
+    console.log("   customer1@pakalale.com / password123 (Memory Zulu)");
+    console.log("   customer2@pakalale.com / password123 (Grace Mwamba)");
+    console.log("   customer3@pakalale.com / password123 (Patrick Banda)");
+    console.log("   ... and 17 more customers\n");
+    console.log("   shop1@pakalale.com / password123 (TechHub Zambia)");
+    console.log("   shop2@pakalale.com / password123 (FreshBasket Market)");
+    console.log("   ... and more shops\n");
 
     await mongoose.disconnect();
     process.exit(0);
