@@ -5,6 +5,7 @@ import Product from "@/models/Product";
 import Shop from "@/models/Shop";
 import { FeedPost, Location } from "@/models/FeedPost";
 import SearchHistory from "@/models/SearchHistory";
+import { getCached, setCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
   if (!val) return "";
@@ -203,6 +204,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ products: [], shops: [], locations: [], totalCount: 0 });
     }
 
+    const searchCacheKey = `search:${q}:${locationId || ""}:${category || ""}:${page}:${limit}`;
+    const cachedSearch = getCached(searchCacheKey);
+    if (cachedSearch) return NextResponse.json(cachedSearch);
+
     const keywords = extractKeywords(q);
 
     // Build product query
@@ -306,7 +311,7 @@ export async function GET(request: NextRequest) {
       }).catch(() => {}); // Fire and forget
     }
 
-    return NextResponse.json({
+    const result = {
       products: paginatedProducts.map((p) => ({
         id: p.id,
         name: p.name,
@@ -372,7 +377,9 @@ export async function GET(request: NextRequest) {
         category: keywords.category,
         priceMax: keywords.priceMax,
       },
-    });
+    };
+    setCache(searchCacheKey, result, 15_000); // 15s cache
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Search v2 GET error:", error);
     return NextResponse.json({ error: "Search failed" }, { status: 500 });

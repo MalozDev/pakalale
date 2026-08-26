@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Location } from "@/models/FeedPost";
+import { getCached, setCache } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,10 +45,16 @@ export async function GET(request: NextRequest) {
       query.specialties = specialty;
     }
 
+    const cacheKey = `loc:${JSON.stringify({ search, specialty })}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const locations = await Location.find(query).sort({ rating: -1 }).lean();
-    return NextResponse.json({
+    const result = {
       locations: locations.map((l) => ({ ...l, id: l._id.toString() })),
-    });
+    };
+    setCache(cacheKey, result, 30_000); // 30s cache — locations rarely change
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Locations GET error:", error);
     return NextResponse.json({ error: "Failed to fetch locations" }, { status: 500 });

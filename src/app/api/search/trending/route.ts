@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SearchHistory from "@/models/SearchHistory";
+import { getCached, setCache } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,6 +9,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "10");
     const days = parseInt(searchParams.get("days") || "7");
+
+    const cacheKey = `trending:${limit}:${days}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
 
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
@@ -19,13 +24,15 @@ export async function GET(request: NextRequest) {
       { $limit: limit },
     ]);
 
-    return NextResponse.json({
+    const result = {
       trending: trending.map((t) => ({
         query: t._id,
         count: t.count,
         lastSearched: t.lastSearched,
       })),
-    });
+    };
+    setCache(cacheKey, result, 30_000); // 30s cache
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Trending GET error:", error);
     return NextResponse.json({ error: "Failed to fetch trending searches" }, { status: 500 });

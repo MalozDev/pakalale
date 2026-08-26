@@ -17,22 +17,29 @@ export async function GET(request: NextRequest) {
     const cached = getCached(cacheKey);
     if (cached) return NextResponse.json(cached);
 
-    const notifications = await Notification.find({ userId })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
-
-    const unreadCount = await Notification.countDocuments({ userId, isRead: false });
+    const [notifications, unreadCount] = await Promise.all([
+      Notification.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .select("userId type title message isRead actionUrl createdAt")
+        .lean(),
+      Notification.countDocuments({ userId, isRead: false }),
+    ]);
 
     const result = {
       notifications: notifications.map((n) => ({
-        ...n,
         id: n._id.toString(),
         userId: n.userId.toString(),
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        isRead: n.isRead,
+        actionUrl: n.actionUrl,
+        createdAt: n.createdAt,
       })),
       unreadCount,
     };
-    setCache(cacheKey, result, 10_000); // 10s cache
+    setCache(cacheKey, result, 30_000); // 30s cache
     return NextResponse.json(result);
   } catch (error) {
     console.error("Notifications GET error:", error);
@@ -54,6 +61,7 @@ export async function PUT(request: NextRequest) {
 
     if (body.id) {
       await Notification.findByIdAndUpdate(body.id, { isRead: body.isRead ?? true });
+      if (userId) invalidateCache(`notif:${userId}`);
       return NextResponse.json({ success: true });
     }
 

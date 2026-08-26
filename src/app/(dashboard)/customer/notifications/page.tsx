@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, Store, Heart, MapPin, Package, Info, Loader2, Bell, Trash2 } from "lucide-react";
+import { MessageSquare, Store, Heart, MapPin, Package, Info, Bell, Trash2, Sparkles, TrendingUp, ShoppingBag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,22 @@ import { useAuthStore } from "@/store/authStore";
 import { useNotifications, markNotificationsRead, type NotificationData } from "@/hooks/useApi";
 import { useNotificationStore } from "@/store/notificationStore";
 
-const iconMap: Record<string, React.ElementType> = { deal: MessageSquare, message: MessageSquare, shop: Store, review: Heart, order: Package, system: Info };
-const colorMap: Record<string, string> = { deal: "text-primary bg-primary/10", message: "text-teal-500 bg-teal-500/10", shop: "text-amber-400 bg-amber-400/10", review: "text-rose-400 bg-rose-400/10", order: "text-blue-400 bg-blue-400/10", system: "text-muted-foreground bg-muted" };
+const iconMap: Record<string, React.ElementType> = {
+  deal: MessageSquare,
+  message: MessageSquare,
+  shop: Store,
+  review: Heart,
+  order: Package,
+  system: Info,
+};
+const colorMap: Record<string, string> = {
+  deal: "text-primary bg-primary/10",
+  message: "text-teal-500 bg-teal-500/10",
+  shop: "text-amber-400 bg-amber-400/10",
+  review: "text-rose-400 bg-rose-400/10",
+  order: "text-blue-400 bg-blue-400/10",
+  system: "text-muted-foreground bg-muted",
+};
 
 const formatTime = (timestamp: string) => {
   const diff = (Date.now() - new Date(timestamp).getTime()) / (1000 * 60);
@@ -53,7 +67,6 @@ export default function NotificationsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: notificationId }),
       });
-      // Find the deleted notification to check if it was unread
       const deleted = notifications.find((n) => n.id === notificationId);
       if (deleted && !deleted.isRead) {
         setUnreadCount(Math.max(0, (data?.unreadCount || 1) - 1));
@@ -63,6 +76,10 @@ export default function NotificationsPage() {
       console.error("Failed to delete notification:", e);
     }
   }, [notifications, data?.unreadCount, refetch, setUnreadCount]);
+
+  const dealCount = notifications.filter((n) => n.type === "deal").length;
+  const messageCount = notifications.filter((n) => n.type === "message").length;
+  const shopCount = notifications.filter((n) => n.type === "shop").length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,25 +92,33 @@ export default function NotificationsPage() {
       </header>
 
       <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-gradient-to-br from-teal-500/10 to-primary/10 border-teal-500/20">
-            <CardContent className="p-4">
-              <h4 className="font-semibold text-sm mb-1">Deal Updates</h4>
-              <p className="text-xs text-muted-foreground mb-2">{notifications.filter(n => n.type === "deal").length} deals</p>
-              <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={() => router.push("/customer/deals")}>View Deals</Button>
+        {/* Summary cards */}
+        <div className="grid grid-cols-3 gap-2">
+          <Card className="bg-gradient-to-br from-teal-500/10 to-primary/10 border-teal-500/20 cursor-pointer" onClick={() => router.push("/customer/chat")}>
+            <CardContent className="p-3 text-center">
+              <MessageSquare className="h-5 w-5 text-teal-500 mx-auto mb-1" />
+              <p className="text-lg font-bold">{messageCount}</p>
+              <p className="text-[10px] text-muted-foreground">Messages</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-rose-500/10 to-amber-500/10 border-rose-500/20">
-            <CardContent className="p-4">
-              <h4 className="font-semibold text-sm mb-1">Shop Updates</h4>
-              <p className="text-xs text-muted-foreground mb-2">{notifications.filter(n => n.type === "shop").length} shop alerts</p>
-              <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={() => router.push("/customer/locations")}>Browse Shops</Button>
+          <Card className="bg-gradient-to-br from-primary/10 to-amber-500/10 border-primary/20 cursor-pointer" onClick={() => router.push("/customer/deals")}>
+            <CardContent className="p-3 text-center">
+              <ShoppingBag className="h-5 w-5 text-primary mx-auto mb-1" />
+              <p className="text-lg font-bold">{dealCount}</p>
+              <p className="text-[10px] text-muted-foreground">Deals</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-amber-400/10 to-rose-400/10 border-amber-400/20 cursor-pointer" onClick={() => router.push("/customer/locations")}>
+            <CardContent className="p-3 text-center">
+              <Store className="h-5 w-5 text-amber-400 mx-auto mb-1" />
+              <p className="text-lg font-bold">{shopCount}</p>
+              <p className="text-[10px] text-muted-foreground">Shops</p>
             </CardContent>
           </Card>
         </div>
 
+        {/* Notification list */}
         <div>
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Heart className="h-4 w-4 text-primary" />Recent Activity</h3>
           {loading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -106,27 +131,57 @@ export default function NotificationsPage() {
                 </div>
               ))}
             </div>
+          ) : notifications.length === 0 ? (
+            /* Empty state */
+            <div className="text-center py-12 space-y-4">
+              <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                <Bell className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">No notifications yet</h3>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                  You&apos;ll see alerts for new messages, deal updates, shop responses, and more here.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 max-w-xs mx-auto">
+                <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push("/customer")}>
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Browse the Feed
+                </Button>
+                <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push("/customer/locations")}>
+                  <Store className="h-3.5 w-3.5 mr-1.5" /> Explore Shops
+                </Button>
+                <Button size="sm" variant="outline" className="text-xs" onClick={() => router.push("/customer/search")}>
+                  <TrendingUp className="h-3.5 w-3.5 mr-1.5" /> Search Products
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className="space-y-2">
               {notifications.map((n) => {
                 const Icon = iconMap[n.type] || MapPin;
                 return (
-                  <Card key={n.id} className={`bg-card border-border cursor-pointer hover:bg-muted/50 transition-colors ${!n.isRead ? "border-primary/20" : ""}`} onClick={() => { if (n.actionUrl) router.push(n.actionUrl); }}>
+                  <Card
+                    key={n.id}
+                    className={`bg-card border-border cursor-pointer hover:bg-muted/50 transition-colors ${!n.isRead ? "border-primary/20 bg-primary/5" : ""}`}
+                    onClick={() => { if (n.actionUrl) router.push(n.actionUrl); }}
+                  >
                     <CardContent className="p-3">
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg shrink-0 ${colorMap[n.type] || "text-muted-foreground bg-muted"}`}><Icon className="h-4 w-4" /></div>
+                        <div className={`p-2 rounded-lg shrink-0 ${colorMap[n.type] || "text-muted-foreground bg-muted"}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <h4 className="text-sm font-medium truncate">{n.title}</h4>
                             <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(n.createdAt)}</span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {!n.isRead && <div className="w-2 h-2 bg-primary rounded-full" />}
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(n.id); }}
-                            className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1 text-muted-foreground hover:text-destructive transition-colors"
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
@@ -136,7 +191,6 @@ export default function NotificationsPage() {
                   </Card>
                 );
               })}
-              {notifications.length === 0 && <div className="text-center py-8 text-muted-foreground"><Bell className="h-8 w-8 mx-auto mb-2 opacity-50" /><p className="text-sm">No notifications yet</p></div>}
             </div>
           )}
         </div>

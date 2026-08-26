@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
+import { getCached, setCache, invalidateCache } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +12,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
+    const cacheKey = `profile:${userId}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const user = await User.findById(userId)
       .select("-password")
       .lean();
@@ -18,7 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({
+    const result = {
       user: {
         id: user._id.toString(),
         email: user.email,
@@ -33,7 +38,9 @@ export async function GET(request: NextRequest) {
         createdAt: user.createdAt?.toISOString?.() || "",
         updatedAt: user.updatedAt?.toISOString?.() || "",
       },
-    });
+    };
+    setCache(cacheKey, result, 30_000); // 30s cache
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Profile GET error:", error);
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
@@ -66,6 +73,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    invalidateCache(`profile:${userId}`);
     return NextResponse.json({
       user: {
         id: user._id.toString(),

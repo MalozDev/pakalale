@@ -57,6 +57,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Send welcome notification
+    const { createNotification } = await import("@/lib/notifications");
+    if (role === "customer") {
+      await createNotification({
+        userId: user._id.toString(),
+        type: "system",
+        title: "Welcome to Pakalale! 🎉",
+        message: `Hey ${firstName}! Start by browsing shops near you or searching for products. Tap the search bar to get started.`,
+        actionUrl: "/customer",
+      });
+      await createNotification({
+        userId: user._id.toString(),
+        type: "shop",
+        title: "Discover Nearby Shops",
+        message: "Browse verified shops in your area. Find the best deals on products you love.",
+        actionUrl: "/customer/locations",
+      });
+    } else if (role === "shop_owner") {
+      await createNotification({
+        userId: user._id.toString(),
+        type: "system",
+        title: "Shop Owner Welcome! 🏪",
+        message: `Welcome ${firstName}! Your shop is being reviewed. You'll be notified once verified. Start adding products right away.`,
+        actionUrl: "/shop",
+      });
+    }
+
     return NextResponse.json(
       {
         message: "Account created successfully",

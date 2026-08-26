@@ -14,16 +14,6 @@ function toStr(val: unknown): string {
   return String(val);
 }
 
-function populateToStr(val: unknown): Record<string, unknown> | string {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object" && val !== null && "_id" in val) {
-    const obj = val as Record<string, unknown>;
-    return { ...obj, id: String(obj._id) };
-  }
-  return String(val);
-}
-
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -54,30 +44,50 @@ export async function GET(request: NextRequest) {
 
     const id = searchParams.get("id");
     if (id) {
-      const shop = await Shop.findById(id).populate("ownerId", "firstName lastName email avatar").lean();
+      const cacheKey = `shop:${id}`;
+      const cached = getCached(cacheKey);
+      if (cached) return NextResponse.json(cached);
+
+      const shop = await Shop.findById(id)
+        .select("name description ownerId locationId status contact hours coverImage profileImage images specialties rating totalReviews createdAt updatedAt")
+        .lean();
       if (!shop) {
         return NextResponse.json({ error: "Shop not found" }, { status: 404 });
       }
 
-      const [productCount, totalViews, orderCount] = await Promise.all([
-        Product.countDocuments({ shopId: shop._id }),
-        Product.aggregate([
-          { $match: { shopId: shop._id } },
-          { $group: { _id: null, total: { $sum: "$views" } } },
-        ]),
-        Order.countDocuments({ shopId: shop._id }),
-      ]);
+      // Fetch owner info separately — faster than populate
+      const User = (await import("@/models/User")).default;
+      const owner = await User.findById(shop.ownerId)
+        .select("firstName lastName email avatar")
+        .lean();
 
-      return NextResponse.json({
+      const productCount = await Product.countDocuments({ shopId: shop._id });
+
+      const result = {
         shop: {
-          ...shop,
           id: shop._id.toString(),
-          ownerId: populateToStr(shop.ownerId),
+          name: shop.name,
+          description: shop.description,
+          ownerId: owner
+            ? { id: toStr(owner._id), firstName: owner.firstName, lastName: owner.lastName, email: owner.email, avatar: owner.avatar }
+            : { id: toStr(shop.ownerId) },
+          locationId: shop.locationId,
+          status: shop.status,
+          contact: shop.contact,
+          hours: shop.hours,
+          coverImage: shop.coverImage,
+          profileImage: shop.profileImage,
+          images: shop.images,
+          specialties: shop.specialties,
+          rating: shop.rating,
+          totalReviews: shop.totalReviews,
           productCount,
-          totalViews: totalViews[0]?.total || 0,
-          orderCount,
+          createdAt: shop.createdAt,
+          updatedAt: shop.updatedAt,
         },
-      });
+      };
+      setCache(cacheKey, result, 60_000); // 60s cache
+      return NextResponse.json(result);
     }
 
     // Build cache key from query params
@@ -87,10 +97,27 @@ export async function GET(request: NextRequest) {
 
     const shops = await Shop.find(query)
       .sort({ [sort]: order })
-      .populate("ownerId", "firstName lastName email avatar")
+      .select("name description ownerId locationId status contact coverImage profileImage images specialties rating totalReviews totalViews createdAt updatedAt")
       .lean();
 
-    // Batch count products instead of N+1 queries
+    if (shops.length === 0) {
+      const result = { shops: [] };
+      setCache(cacheKey, result, 60_000);
+      return NextResponse.json(result);
+    }
+
+    // Batch fetch owners — single query instead of N
+    const ownerIds = [...new Set(shops.map((s) => toStr(s.ownerId)).filter(Boolean))];
+    const User = (await import("@/models/User")).default;
+    const owners = ownerIds.length > 0
+      ? await User.find({ _id: { $in: ownerIds } })
+          .select("firstName lastName email avatar")
+          .lean()
+      : [];
+    const ownerMap = new Map<string, Record<string, unknown>>();
+    owners.forEach((o) => ownerMap.set(toStr(o._id), o as unknown as Record<string, unknown>));
+
+    // Batch count products — single aggregation instead of N queries
     const shopIds = shops.map((s) => s._id);
     const productCounts = await Product.aggregate([
       { $match: { shopId: { $in: shopIds } } },
@@ -100,14 +127,31 @@ export async function GET(request: NextRequest) {
     productCounts.forEach((pc) => countMap.set(toStr(pc._id), pc.count));
 
     const result = {
-      shops: shops.map((shop) => ({
-        ...shop,
-        id: shop._id.toString(),
-        productCount: countMap.get(shop._id.toString()) || 0,
-        ownerId: populateToStr(shop.ownerId),
-      })),
+      shops: shops.map((shop) => {
+        const owner = ownerMap.get(toStr(shop.ownerId));
+        return {
+          id: shop._id.toString(),
+          name: shop.name,
+          description: shop.description,
+          ownerId: owner
+            ? { id: toStr(shop.ownerId), firstName: owner.firstName, lastName: owner.lastName, email: owner.email, avatar: owner.avatar }
+            : { id: toStr(shop.ownerId) },
+          locationId: shop.locationId,
+          status: shop.status,
+          contact: shop.contact,
+          coverImage: shop.coverImage,
+          profileImage: shop.profileImage,
+          images: shop.images,
+          specialties: shop.specialties,
+          rating: shop.rating,
+          totalReviews: shop.totalReviews,
+          productCount: countMap.get(shop._id.toString()) || 0,
+          createdAt: shop.createdAt,
+          updatedAt: shop.updatedAt,
+        };
+      }),
     };
-    setCache(cacheKey, result, 15_000); // 15s cache
+    setCache(cacheKey, result, 60_000); // 60s cache
     return NextResponse.json(result);
   } catch (error) {
     console.error("Shops GET error:", error);

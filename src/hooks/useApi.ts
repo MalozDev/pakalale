@@ -1,38 +1,145 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
-// ── Generic fetch hook ──
-// Shows loading only on first fetch. Subsequent refetches update data silently.
+// ── Client-side cache with stale-while-revalidate ──
+const clientCache = new Map<string, { data: unknown; timestamp: number }>();
+const STALE_TIME = 60_000; // Data is considered fresh for 60 seconds
+const CACHE_MAX = 200; // Max cached entries
+
+function getCachedData<T>(key: string): T | null {
+  const entry = clientCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > STALE_TIME * 5) {
+    // Expired after 5x stale time
+    clientCache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setCachedData(key: string, data: unknown): void {
+  // Evict oldest if at max
+  if (clientCache.size >= CACHE_MAX) {
+    const oldest = clientCache.keys().next().value;
+    if (oldest) clientCache.delete(oldest);
+  }
+  clientCache.set(key, { data, timestamp: Date.now() });
+}
+
+function isStale(key: string): boolean {
+  const entry = clientCache.get(key);
+  if (!entry) return true;
+  return Date.now() - entry.timestamp > STALE_TIME;
+}
+
+// Deduplicate in-flight requests across all component instances
+const inflight = new Map<string, Promise<unknown>>();
+const inflightResolvers = new Map<string, { resolve: (v: unknown) => void; reject: (e: unknown) => void }[]>();
+
+async function fetchWithDedupe<T>(url: string): Promise<T> {
+  // If already in-flight, wait for the same request
+  const existing = inflight.get(url);
+  if (existing) return existing as Promise<T>;
+
+  const promise = fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  });
+
+  inflight.set(url, promise);
+
+  try {
+    const result = await promise;
+    return result as T;
+  } finally {
+    inflight.delete(url);
+  }
+}
+
+// ── Generic fetch hook with SWR ──
 function useFetch<T>(url: string | null, deps: unknown[] = []) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<T | null>(() => {
+    if (!url) return null;
+    return getCachedData<T>(url);
+  });
+  const [loading, setLoading] = useState(() => {
+    if (!url) return false;
+    return !getCachedData<T>(url); // Only show loading if no cache
+  });
   const [error, setError] = useState<string | null>(null);
-  const hasData = data !== null;
-
-  const refetch = useCallback(async () => {
-    if (!url) { setLoading(false); return; }
-    try {
-      // Only show loading skeleton on first fetch — keep existing data visible on refetch
-      if (!hasData) setLoading(true);
-      setError(null);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setData(json);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, ...deps]);
+  const mountedRef = useRef(true);
+  const urlRef = useRef(url);
 
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-  return { data, loading, error, refetch, setData };
+  // Track URL changes
+  useEffect(() => {
+    urlRef.current = url;
+  }, [url]);
+
+  const fetchData = useCallback(
+    async (forceRefresh = false) => {
+      if (!url) {
+        setLoading(false);
+        return;
+      }
+
+      // Check cache first
+      const cached = getCachedData<T>(url);
+
+      if (cached && !forceRefresh) {
+        setData(cached);
+        setLoading(false);
+
+        // Only refetch if data is stale
+        if (!isStale(url)) return;
+      } else if (!cached) {
+        setLoading(true);
+      }
+
+      try {
+        setError(null);
+        const json = await fetchWithDedupe<T>(url);
+
+        if (!mountedRef.current || urlRef.current !== url) return;
+        setData(json);
+        setCachedData(url, json);
+      } catch (e) {
+        if (!mountedRef.current || urlRef.current !== url) return;
+        setError(e instanceof Error ? e.message : "Unknown error");
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [url, ...deps]
+  );
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const refetch = useCallback(() => fetchData(true), [fetchData]);
+
+  // Optimistic update — update cache + state instantly
+  const setDataOptimistic = useCallback(
+    (updater: T | ((prev: T | null) => T)) => {
+      setData((prev) => {
+        const next = typeof updater === "function" ? (updater as (prev: T | null) => T)(prev) : updater;
+        if (url) setCachedData(url, next);
+        return next;
+      });
+    },
+    [url]
+  );
+
+  return { data, loading, error, refetch, setData: setDataOptimistic };
 }
 
 // ── Products ──

@@ -29,22 +29,15 @@ export default function Header({ activeTab = "home", onTabChange, userId, title 
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
 
-  // Fetch and poll notifications
+  // Single initial fetch for counts — no polling (Socket.IO handles updates)
   useEffect(() => {
     if (!userId) return;
-    const fetchCounts = () => {
-      fetch(`/api/notifications?userId=${userId}`)
-        .then((r) => r.json())
-        .then((data) => setUnreadCount(data.unreadCount || 0))
-        .catch(() => {});
-      fetch(`/api/chat?userId=${userId}`)
-        .then((r) => r.json())
-        .then((data) => setChatUnreadCount(data.totalUnread || 0))
-        .catch(() => {});
-    };
-    fetchCounts();
-    const interval = setInterval(fetchCounts, 60000); // Poll every 60s
-    return () => clearInterval(interval);
+
+    // Fetch counts once on mount
+    Promise.all([
+      fetch(`/api/notifications?userId=${userId}`).then((r) => r.json()).then((d) => setUnreadCount(d.unreadCount || 0)).catch(() => {}),
+      fetch(`/api/chat?userId=${userId}`).then((r) => r.json()).then((d) => setChatUnreadCount(d.totalUnread || 0)).catch(() => {}),
+    ]);
   }, [userId, setUnreadCount]);
 
   const navItems = [
@@ -116,8 +109,8 @@ export default function Header({ activeTab = "home", onTabChange, userId, title 
       </div>
     </header>
 
-      {/* Search Overlay */}
-      <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+    {/* Search Overlay */}
+    <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

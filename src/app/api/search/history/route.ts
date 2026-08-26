@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SearchHistory from "@/models/SearchHistory";
+import { getCached, setCache, invalidateCache } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,12 +15,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
+    const cacheKey = `searchhistory:${userId}:${limit}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const history = await SearchHistory.find({ userId: new mongoose.Types.ObjectId(userId) })
       .sort({ timestamp: -1 })
       .limit(limit)
       .lean();
 
-    return NextResponse.json({
+    const result = {
       history: history.map((h) => ({
         id: h._id.toString(),
         query: h.query,
@@ -27,7 +32,9 @@ export async function GET(request: NextRequest) {
         locationId: h.locationId,
         timestamp: h.timestamp,
       })),
-    });
+    };
+    setCache(cacheKey, result, 30_000); // 30s cache
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Search History GET error:", error);
     return NextResponse.json({ error: "Failed to fetch search history" }, { status: 500 });
@@ -50,6 +57,9 @@ export async function POST(request: NextRequest) {
       resultCount: resultCount || 0,
       locationId,
     });
+
+    invalidateCache(`searchhistory:${userId}`);
+    invalidateCache("trending:");
 
     return NextResponse.json({ id: record._id.toString() }, { status: 201 });
   } catch (error) {

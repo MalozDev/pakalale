@@ -1,13 +1,22 @@
 // Simple in-memory TTL cache for API responses
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
 
+// Stats for debugging
+let hitCount = 0;
+let missCount = 0;
+
 export function getCached<T>(key: string): T | null {
   const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key);
+  if (!entry) {
+    missCount++;
     return null;
   }
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    missCount++;
+    return null;
+  }
+  hitCount++;
   return entry.data as T;
 }
 
@@ -19,6 +28,10 @@ export function invalidateCache(prefix: string): void {
   for (const key of cache.keys()) {
     if (key.startsWith(prefix)) cache.delete(key);
   }
+}
+
+export function getCacheStats() {
+  return { hitCount, missCount, size: cache.size };
 }
 
 // Auto-cleanup every 60s

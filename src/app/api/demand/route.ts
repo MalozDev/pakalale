@@ -161,6 +161,23 @@ export async function POST(request: NextRequest) {
       coordinates,
     });
 
+    // Notify shop owners in the same location about this demand
+    if (locationId) {
+      const { createBulkNotifications } = await import("@/lib/notifications");
+      const ShopModel = (await import("@/models/Shop")).default;
+      const User = (await import("@/models/User")).default;
+      const shops = await ShopModel.find({ locationId }).select("ownerId").lean();
+      const ownerIds = [...new Set(shops.map((s) => toStr(s.ownerId)).filter((oid) => oid !== customerId))];
+      if (ownerIds.length > 0) {
+        await createBulkNotifications(ownerIds, {
+          type: "shop",
+          title: "New customer request 📦",
+          message: `A customer is looking for: ${searchQuery}`,
+          actionUrl: "/customer/deals",
+        });
+      }
+    }
+
     return NextResponse.json({
       demand: {
         id: record._id.toString(),
