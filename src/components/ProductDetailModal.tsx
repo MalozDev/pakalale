@@ -43,7 +43,7 @@ export default function ProductDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[calc(100vw-1rem)] max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col sm:w-full rounded-2xl">
+      <DialogContent overlayClassName="z-[70]" className="z-[70] w-[calc(100vw-1rem)] max-w-md p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col sm:w-full rounded-2xl">
         {/* Close button */}
         <button
           onClick={onClose}

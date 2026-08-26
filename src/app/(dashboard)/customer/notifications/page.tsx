@@ -2,7 +2,8 @@
 
 import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, Store, Heart, MapPin, Package, Info, ArrowLeft, Loader2, Bell, Trash2 } from "lucide-react";
+import { MessageSquare, Store, Heart, MapPin, Package, Info, Loader2, Bell, Trash2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
@@ -67,7 +68,7 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4 mr-1" />Back</Button>
+          <div className="w-16" />
           <h1 className="text-sm font-bold">Notifications</h1>
           <Button variant="ghost" size="sm" onClick={() => refetch()}><Bell className="h-4 w-4" /></Button>
         </div>
@@ -94,7 +95,17 @@ export default function NotificationsPage() {
         <div>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Heart className="h-4 w-4 text-primary" />Recent Activity</h3>
           {loading ? (
-            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-card border border-border rounded-lg p-3">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-9 w-9 rounded-lg shrink-0" />
+                    <div className="flex-1 space-y-1.5"><Skeleton className="h-3 w-32" /><Skeleton className="h-2 w-full" /></div>
+                    <Skeleton className="h-2 w-10 shrink-0" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="space-y-2">
               {notifications.map((n) => {

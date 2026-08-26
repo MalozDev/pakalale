@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { TrendingUp, MapPin, Store, Star, Loader2, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import Header from "@/components/Header";
 import Feed from "@/components/Feed";
 import { useAuthStore } from "@/store/authStore";
@@ -96,8 +97,14 @@ export default function CustomerDashboard() {
           </div>
 
           {shopsLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <div className="flex gap-3 overflow-x-hidden pb-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="shrink-0 min-w-[160px] max-w-[180px] bg-card border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2"><Skeleton className="h-9 w-9 rounded-lg" /><Skeleton className="h-3 w-20" /></div>
+                  <Skeleton className="h-2 w-16" />
+                  <div className="flex items-center justify-between"><Skeleton className="h-2 w-10" /><Skeleton className="h-4 w-14 rounded" /></div>
+                </div>
+              ))}
             </div>
           ) : (
             <div

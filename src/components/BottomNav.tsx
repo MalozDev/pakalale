@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { Home, MessageSquare, MapPin, ShoppingBag, Bell } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -18,7 +19,6 @@ const navItems = [
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user } = useAuthStore();
   const globalUnreadCount = useNotificationStore((s) => s.unreadCount);
   const [chatUnread, setChatUnread] = useState(0);
@@ -51,9 +51,10 @@ export default function BottomNav() {
           const isActive = activeId === item.id;
           const badgeCount = item.id === "alerts" ? globalUnreadCount : item.id === "chat" ? chatUnread : item.id === "deals" ? dealCount : 0;
           return (
-            <button
+            <Link
               key={item.id}
-              onClick={() => router.push(item.href)}
+              href={item.href}
+              prefetch={true}
               className={cn(
                 "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[56px]",
                 isActive
@@ -70,7 +71,7 @@ export default function BottomNav() {
                 )}
               </div>
               <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
+            </Link>
           );
         })}
       </div>

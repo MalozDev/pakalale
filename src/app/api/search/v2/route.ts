@@ -265,10 +265,10 @@ export async function GET(request: NextRequest) {
     }
     if (locationId) shopQuery.locationId = locationId;
 
-    const shops = await Shop.find(shopQuery)
-      .limit(10)
-      .populate("ownerId", "firstName lastName")
-      .lean();
+    // Only search shops if there are matching products — no point showing shops that don't carry the item
+    const shops = totalProducts > 0
+      ? await Shop.find(shopQuery).limit(10).populate("ownerId", "firstName lastName").lean()
+      : [];
 
     // Search locations
     const locationQuery: Record<string, unknown> = {};

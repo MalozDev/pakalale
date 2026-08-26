@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Store, Bell, Home, MapPin, MessageSquare, Settings, Menu, ShoppingBag, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Store, Bell, Home, MapPin, MessageSquare, Settings, Menu, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +17,10 @@ interface HeaderProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   userId?: string;
-  showBack?: boolean;
   title?: string;
 }
 
-export default function Header({ activeTab = "home", onTabChange, userId, showBack, title }: HeaderProps) {
+export default function Header({ activeTab = "home", onTabChange, userId, title }: HeaderProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
@@ -43,7 +43,7 @@ export default function Header({ activeTab = "home", onTabChange, userId, showBa
         .catch(() => {});
     };
     fetchCounts();
-    const interval = setInterval(fetchCounts, 30000); // Poll every 30s
+    const interval = setInterval(fetchCounts, 60000); // Poll every 60s
     return () => clearInterval(interval);
   }, [userId, setUnreadCount]);
 
@@ -60,16 +60,10 @@ export default function Header({ activeTab = "home", onTabChange, userId, showBa
     <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 h-14">
-        {showBack ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => router.back()}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        ) : (
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="bg-primary p-1.5 rounded-lg"><Store className="h-4 w-4 text-primary-foreground" /></div>
-            <span className="text-lg font-bold hidden sm:inline">Pakalale</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="bg-primary p-1.5 rounded-lg"><Store className="h-4 w-4 text-primary-foreground" /></div>
+          <span className="text-lg font-bold hidden sm:inline">Pakalale</span>
+        </div>
 
         {title ? (
           <h1 className="text-sm font-bold flex-1 text-center">{title}</h1>
@@ -110,14 +104,14 @@ export default function Header({ activeTab = "home", onTabChange, userId, showBa
       {/* Desktop nav */}
       <div className="hidden sm:flex items-center justify-center gap-1 px-4 pb-2">
         {navItems.map((item) => (
-          <button key={item.id} onClick={() => router.push(item.href)}
+          <Link key={item.id} href={item.href} prefetch={true}
             className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors relative", activeTab === item.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted")}>
             <item.icon className="h-4 w-4" />
             <span>{item.label}</span>
             {item.count && item.count > 0 && (
               <span className="ml-1 bg-pink-500 text-white text-[9px] rounded-full h-3.5 min-w-[14px] flex items-center justify-center px-0.5 font-bold">{item.count > 9 ? "9+" : item.count}</span>
             )}
-          </button>
+          </Link>
         ))}
       </div>
     </header>

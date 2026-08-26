@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Search, Loader2, ShoppingBag, Clock, MessageSquare, ChevronRight, Package } from "lucide-react";
+import { Search, Loader2, ShoppingBag, Clock, MessageSquare, ChevronRight, Package } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,9 +67,7 @@ export default function DealsListPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-1" />Back
-          </Button>
+          <div className="w-16" />
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4 text-primary" />
             <h1 className="text-sm font-bold">My Deals</h1>
@@ -105,8 +104,14 @@ export default function DealsListPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-lg" /><div className="space-y-1.5 flex-1"><Skeleton className="h-3 w-28" /><Skeleton className="h-2 w-20" /></div><Skeleton className="h-5 w-16 rounded-full" /></div>
+                <div className="flex gap-3 pl-10"><Skeleton className="h-2 w-20" /><Skeleton className="h-2 w-20" /></div>
+                <div className="flex items-center justify-between pl-10"><Skeleton className="h-2 w-32" /><Skeleton className="h-2 w-12" /></div>
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">

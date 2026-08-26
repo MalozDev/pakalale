@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, PhoneCall, Wifi, WifiOff, Loader2 } from "lucide-react";
+import { PhoneCall, Wifi, WifiOff, Loader2 } from "lucide-react";
 import MessageBubble from "@/components/MessageBubble";
 import MessageInput from "@/components/MessageInput";
 import ChatListSimple from "@/components/ChatListSimple";
@@ -211,14 +211,28 @@ export default function ChatPage() {
     window.history.replaceState(null, "", `/customer/chat?chatId=${chat.id}`);
   };
 
-  // Show loading when navigating directly to a chat via URL
+  // Show chat skeleton when navigating directly to a chat via URL
   if (chatIdFromUrl && !activeChat && chats.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
-          <p className="text-xs text-muted-foreground">Loading chat...</p>
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border shrink-0">
+          <div className="flex items-center justify-between px-4 h-14">
+            <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+            <div className="text-center space-y-1"><div className="h-3 w-24 bg-muted rounded animate-pulse mx-auto" /><div className="h-2 w-16 bg-muted rounded animate-pulse mx-auto" /></div>
+            <div className="h-8 w-8 bg-muted rounded animate-pulse" />
+          </div>
+        </header>
+        <div className="flex-1 p-3 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+              <div className="bg-muted rounded-2xl px-4 py-2.5 space-y-1" style={{ width: `${60 + Math.random() * 30}%` }}>
+                <div className="h-3 w-full bg-background/30 rounded animate-pulse" />
+                <div className="h-2 w-12 bg-background/30 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
+        <div className="shrink-0 p-3 border-t border-border"><div className="h-10 bg-muted rounded-lg animate-pulse" /></div>
       </div>
     );
   }
@@ -242,9 +256,7 @@ export default function ChatPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border shrink-0">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button variant="ghost" size="sm" onClick={() => { setShowChatList(true); setActiveChat(null); setReplyTo(null); window.history.replaceState(null, "", "/customer/chat"); }}>
-            <ArrowLeft className="h-4 w-4 mr-1" />Back
-          </Button>
+          <div className="w-16" />
           <div className="text-center min-w-0">
             <div className="flex items-center gap-2 justify-center">
               <h1 className="text-sm font-bold truncate">{otherName}</h1>

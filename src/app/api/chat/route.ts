@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Chat, Message } from "@/models/Message";
+import { getCached, setCache, invalidateCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
   if (!val) return "";
@@ -36,23 +37,33 @@ export async function GET(request: NextRequest) {
     const chatId = searchParams.get("chatId");
 
     if (chatId) {
+      const cacheKey = `chat:messages:${chatId}`;
+      const cached = getCached(cacheKey);
+      if (cached) return NextResponse.json(cached);
+
       const messages = await Message.find({ chatId })
         .sort({ timestamp: 1 })
         .lean();
 
-      return NextResponse.json({
+      const result = {
         messages: messages.map((m) => ({
           ...m,
           id: m._id.toString(),
           chatId: toStr(m.chatId),
           senderId: toStr(m.senderId),
         })),
-      });
+      };
+      setCache(cacheKey, result, 5_000); // 5s cache
+      return NextResponse.json(result);
     }
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
+
+    const listCacheKey = `chat:list:${userId}`;
+    const cachedList = getCached(listCacheKey);
+    if (cachedList) return NextResponse.json(cachedList);
 
     const chats = await Chat.find({ participants: userId, isActive: true })
       .sort({ lastMessageTime: -1 })
@@ -70,7 +81,7 @@ export async function GET(request: NextRequest) {
     unreadCounts.forEach((u) => unreadMap.set(toStr(u._id), u.count));
     const totalUnread = unreadCounts.reduce((sum, u) => sum + u.count, 0);
 
-    return NextResponse.json({
+    const result = {
       chats: chats.map((chat) => {
         const participants = (chat.participants || []).map((p) => populateParticipant(p));
         const otherParticipant = participants.find((p) => p.id !== userId) || null;
@@ -101,7 +112,9 @@ export async function GET(request: NextRequest) {
         };
       }),
       totalUnread,
-    });
+    };
+    setCache(listCacheKey, result, 5_000);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Chat GET error:", error);
     return NextResponse.json({ error: "Failed to fetch chats" }, { status: 500 });
@@ -112,6 +125,10 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
     const body = await request.json();
+
+    // Invalidate chat caches when messages are sent
+    if (body.senderId) invalidateCache(`chat:list:${body.senderId}`);
+    if (body.chatId) invalidateCache(`chat:messages:${body.chatId}`);
 
     if (body.chatId && body.content) {
       const messageData: Record<string, unknown> = {

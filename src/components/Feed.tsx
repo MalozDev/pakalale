@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Image, MapPin, Tag, TrendingUp, Star, Loader2, X, Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import FeedPost from "./FeedPost";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent } from "@/components/ui/card";
@@ -210,12 +211,14 @@ export default function Feed({ authorId }: FeedProps) {
       <Card className="bg-card border-border">
         <CardContent className="p-3 sm:p-4">
           <div className="flex items-center gap-3 mb-3">
-            <Avatar className="h-9 w-9 shrink-0">
-              <AvatarImage src={user?.avatar} alt={user?.firstName} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-amber-golden text-primary-foreground text-xs">
-                {user?.firstName?.[0]}{user?.lastName?.[0]}
-              </AvatarFallback>
-            </Avatar>
+            <button onClick={(e) => { e.stopPropagation(); if (user?.id) router.push(`/customer/profile/${user.id}`); }} className="shrink-0 cursor-pointer rounded-full">
+              <Avatar className="h-9 w-9 cursor-pointer">
+                <AvatarImage src={user?.avatar} alt={user?.firstName} className="cursor-pointer" />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-amber-golden text-primary-foreground text-xs cursor-pointer">
+                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+            </button>
             <Button variant="outline" className="flex-1 justify-start text-muted-foreground text-sm h-9" onClick={() => setShowCreatePost(true)}>
               What&apos;s on your mind, {user?.firstName}?
             </Button>
@@ -244,19 +247,35 @@ export default function Feed({ authorId }: FeedProps) {
       </div>
 
       {/* Posts */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-      ) : (
-        <div className="space-y-4">
-          {feedPosts.length === 0 ? (
-            <div className="text-center py-12"><TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" /><p className="text-sm font-medium">No posts yet</p><p className="text-xs text-muted-foreground">Be the first to share something!</p></div>
-          ) : (
-            feedPosts.map((post) => (
-              <FeedPost key={post.id} post={post} onLike={handleLike} onComment={handleComment} onShare={handleShare} onMakeDeal={handleMakeDeal} onContactShop={handleContactShop} currentUserId={user?.id} currentUserName={user ? `${user.firstName} ${user.lastName}` : undefined} />
-            ))
-          )}
-        </div>
-      )}
+      <div className="space-y-4">
+        {loading && feedPosts.length === 0 ? (
+          <>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-1.5 flex-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-2 w-16" /></div>
+                </div>
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+                <div className="flex gap-2 pt-1"><Skeleton className="h-7 w-16" /><Skeleton className="h-7 w-16" /><Skeleton className="h-7 w-16" /></div>
+              </div>
+            ))}
+          </>
+        ) : feedPosts.length === 0 ? (
+          <div className="text-center py-12"><TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" /><p className="text-sm font-medium">No posts yet</p><p className="text-xs text-muted-foreground">Be the first to share something!</p></div>
+        ) : (
+          feedPosts.map((post) => (
+            <FeedPost key={post.id} post={post} onLike={handleLike} onComment={handleComment} onShare={handleShare} onMakeDeal={handleMakeDeal} onContactShop={handleContactShop} currentUserId={user?.id} currentUserName={user ? `${user.firstName} ${user.lastName}` : undefined} />
+          ))
+        )}
+        {loading && feedPosts.length > 0 && [
+          <div key="loading-1" className="bg-card border border-border rounded-lg p-4 space-y-3 opacity-50">
+            <div className="flex items-center gap-2.5"><Skeleton className="h-10 w-10 rounded-full" /><div className="space-y-1.5 flex-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-2 w-16" /></div></div>
+            <Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-1/2" />
+          </div>
+        ]}
+      </div>
 
       {/* Create Post Dialog */}
       <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>

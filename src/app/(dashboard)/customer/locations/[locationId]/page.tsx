@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { MapPin, Store, Star, Search, ArrowLeft, Clock, Users, Phone, Loader2, Package, ShoppingBag, ChevronRight } from "lucide-react";
+import { MapPin, Store, Star, Search, Clock, Users, Phone, Loader2, Package, ShoppingBag, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,8 @@ export default function LocationDetailPage() {
   }, [initialShopId, allShops, selectedShop]);
 
   const shopProducts = productsData?.products || [];
-  const loading = locLoading || shopsLoading;
+  // Don't block the whole page — only block when NOT viewing a specific shop
+  const loading = selectedShop ? false : (locLoading || shopsLoading);
 
   // Find shop name for the selected shop
   const currentShop = allShops.find((s) => s.id === selectedShop);
@@ -127,9 +129,7 @@ export default function LocationDetailPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button variant="ghost" size="sm" onClick={() => selectedShop ? setSelectedShop(null) : router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-1" />{selectedShop ? "Back to shops" : "Back"}
-          </Button>
+          <div className="w-16" />
           <h1 className="text-sm font-bold truncate">{selectedShop ? currentShop?.name || "Shop" : location?.name || "Location"}</h1>
           <div className="w-16 flex justify-end">
             {dealCount > 0 && (
@@ -144,8 +144,24 @@ export default function LocationDetailPage() {
 
       <div className="px-4 py-4 space-y-4 max-w-5xl mx-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <div className="space-y-4">
+            <div className="bg-card border border-border rounded-lg p-4 sm:p-5 space-y-3">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-3/4" />
+              <div className="flex gap-2"><Skeleton className="h-5 w-16 rounded" /><Skeleton className="h-5 w-16 rounded" /><Skeleton className="h-5 w-16 rounded" /></div>
+              <div className="flex gap-4"><Skeleton className="h-2 w-16" /><Skeleton className="h-2 w-16" /><Skeleton className="h-2 w-16" /></div>
+            </div>
+            <div className="flex gap-3"><Skeleton className="h-10 flex-1 rounded-md" /><Skeleton className="h-10 w-32 rounded-md" /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-card border border-border rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between"><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-4" /></div>
+                  <Skeleton className="h-2 w-full" /><Skeleton className="h-2 w-3/4" />
+                  <div className="flex gap-1"><Skeleton className="h-4 w-14 rounded" /><Skeleton className="h-4 w-14 rounded" /></div>
+                  <Skeleton className="h-7 w-full rounded" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <>
@@ -182,8 +198,15 @@ export default function LocationDetailPage() {
                 </div>
 
                 {productsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                        <Skeleton className="h-24 w-full rounded-lg" />
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-2 w-full" />
+                        <div className="flex justify-between"><Skeleton className="h-3 w-16" /><Skeleton className="h-2 w-12" /></div>
+                      </div>
+                    ))}
                   </div>
                 ) : shopProducts.length === 0 ? (
                   <div className="text-center py-8">

@@ -3,15 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 
 // ── Generic fetch hook ──
+// Shows loading only on first fetch. Subsequent refetches update data silently.
 function useFetch<T>(url: string | null, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasData = data !== null;
 
   const refetch = useCallback(async () => {
     if (!url) { setLoading(false); return; }
     try {
-      setLoading(true);
+      // Only show loading skeleton on first fetch — keep existing data visible on refetch
+      if (!hasData) setLoading(true);
       setError(null);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

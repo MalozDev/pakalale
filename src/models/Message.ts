@@ -80,6 +80,11 @@ const ChatSchema = new Schema<IChat>(
   { timestamps: true }
 );
 
+// Indexes for performance
+MessageSchema.index({ chatId: 1, timestamp: 1 });
+MessageSchema.index({ chatId: 1, senderId: 1, isRead: 1 });
+ChatSchema.index({ participants: 1, isActive: 1, lastMessageTime: -1 });
+
 const Message: Model<IMessage> =
   mongoose.models.Message || mongoose.model<IMessage>("Message", MessageSchema);
 const Chat: Model<IChat> =

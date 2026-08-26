@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Star, Search, Filter, ArrowRight, Clock, ArrowLeft, Loader2, Store } from "lucide-react";
+import { MapPin, Star, Search, Filter, ArrowRight, Clock, Loader2, Store } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,7 @@ export default function LocationsPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4 mr-1" />Back</Button>
+          <div className="w-16" />
           <h1 className="text-sm font-bold">Trading Locations</h1>
           <div className="w-16" />
         </div>
@@ -38,7 +39,16 @@ export default function LocationsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card border border-border rounded-lg p-4 space-y-2">
+                <div className="flex items-start justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-4" /></div>
+                <Skeleton className="h-2 w-full" /><Skeleton className="h-2 w-3/4" />
+                <div className="flex gap-1"><Skeleton className="h-4 w-14 rounded" /><Skeleton className="h-4 w-14 rounded" /></div>
+                <div className="flex items-center gap-2"><Skeleton className="h-2 w-10" /><Skeleton className="h-2 w-10" /></div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {locations.map((location) => {

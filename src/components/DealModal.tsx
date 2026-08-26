@@ -53,7 +53,7 @@ export default function DealModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="z-[70] w-[calc(100vw-2rem)] max-w-md p-0 gap-0 max-h-[85vh] overflow-hidden flex flex-col sm:w-full">
+      <DialogContent overlayClassName="z-[70]" className="z-[70] w-[calc(100vw-2rem)] max-w-md p-0 gap-0 max-h-[85vh] overflow-hidden flex flex-col sm:w-full">
         {/* Header */}
         <div className="flex items-center gap-2 p-3 border-b border-border shrink-0">
           <div className="p-1.5 bg-primary/10 rounded-lg">

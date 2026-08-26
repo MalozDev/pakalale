@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Notification from "@/models/Notification";
+import { getCached, setCache, invalidateCache } from "@/lib/cache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +13,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
+    const cacheKey = `notif:${userId}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const notifications = await Notification.find({ userId })
       .sort({ createdAt: -1 })
       .limit(50)
@@ -19,14 +24,16 @@ export async function GET(request: NextRequest) {
 
     const unreadCount = await Notification.countDocuments({ userId, isRead: false });
 
-    return NextResponse.json({
+    const result = {
       notifications: notifications.map((n) => ({
         ...n,
         id: n._id.toString(),
         userId: n.userId.toString(),
       })),
       unreadCount,
-    });
+    };
+    setCache(cacheKey, result, 10_000); // 10s cache
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Notifications GET error:", error);
     return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
@@ -41,6 +48,7 @@ export async function PUT(request: NextRequest) {
 
     if (action === "markAllRead" && userId) {
       await Notification.updateMany({ userId, isRead: false }, { isRead: true });
+      invalidateCache(`notif:${userId}`);
       return NextResponse.json({ success: true });
     }
 

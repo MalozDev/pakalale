@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Shop from "@/models/Shop";
 import Product from "@/models/Product";
 import Order from "@/models/Order";
+import { getCached, setCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
   if (!val) return "";
@@ -79,24 +80,35 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Build cache key from query params
+    const cacheKey = `shops:${JSON.stringify({ locationId, ownerId, search, status, sort, order })}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const shops = await Shop.find(query)
       .sort({ [sort]: order })
       .populate("ownerId", "firstName lastName email avatar")
       .lean();
 
-    const shopsWithCounts = await Promise.all(
-      shops.map(async (shop) => {
-        const productCount = await Product.countDocuments({ shopId: shop._id });
-        return {
-          ...shop,
-          id: shop._id.toString(),
-          productCount,
-          ownerId: populateToStr(shop.ownerId),
-        };
-      })
-    );
+    // Batch count products instead of N+1 queries
+    const shopIds = shops.map((s) => s._id);
+    const productCounts = await Product.aggregate([
+      { $match: { shopId: { $in: shopIds } } },
+      { $group: { _id: "$shopId", count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map<string, number>();
+    productCounts.forEach((pc) => countMap.set(toStr(pc._id), pc.count));
 
-    return NextResponse.json({ shops: shopsWithCounts });
+    const result = {
+      shops: shops.map((shop) => ({
+        ...shop,
+        id: shop._id.toString(),
+        productCount: countMap.get(shop._id.toString()) || 0,
+        ownerId: populateToStr(shop.ownerId),
+      })),
+    };
+    setCache(cacheKey, result, 15_000); // 15s cache
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Shops GET error:", error);
     return NextResponse.json({ error: "Failed to fetch shops" }, { status: 500 });

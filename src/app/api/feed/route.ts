@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { FeedPost } from "@/models/FeedPost";
 import Shop from "@/models/Shop";
+import { getCached, setCache, invalidateCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
   if (!val) return "";
@@ -46,6 +47,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
 
+    const cacheKey = `feed:${JSON.stringify({ filter, locationId, authorId, page, limit })}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const [posts, total] = await Promise.all([
       FeedPost.find(query)
         .sort({ createdAt: -1 })
@@ -74,7 +79,7 @@ export async function GET(request: NextRequest) {
       shopByOwner.set(toStr(s.ownerId), { shopId: toStr(s._id), locationId: toStr(s.locationId), status: String(s.status) });
     });
 
-    return NextResponse.json({
+    const result = {
       posts: posts.map((p) => {
         const authorObj = p.authorId as unknown as Record<string, unknown> | null;
         const hasAuthor = authorObj && typeof authorObj === "object" && "firstName" in authorObj;
@@ -113,7 +118,9 @@ export async function GET(request: NextRequest) {
       total,
       page,
       totalPages: Math.ceil(total / limit),
-    });
+    };
+    setCache(cacheKey, result, 10_000);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Feed GET error:", error);
     return NextResponse.json({ error: "Failed to fetch feed" }, { status: 500 });
@@ -125,6 +132,7 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
     const body = await request.json();
     const post = await FeedPost.create(body);
+    invalidateCache("feed:");
     return NextResponse.json({
       post: { ...post.toObject(), id: post._id.toString(), likes: 0, comments: [] },
     }, { status: 201 });

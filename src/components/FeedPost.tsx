@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import ContactModal from "./ContactModal";
 import DealModal from "./DealModal";
+import ImageViewerModal from "./ImageViewerModal";
 import VerifiedBadge from "./VerifiedBadge";
 import { cn } from "@/lib/utils";
 import { type FeedPostData } from "@/hooks/useApi";
@@ -47,6 +48,8 @@ export default function FeedPost({
   const [showDealModal, setShowDealModal] = useState(false);
   const [dealSending, setDealSending] = useState(false);
   const [likeAnimating, setLikeAnimating] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const isLiked = currentUserId ? (post.likedBy || []).includes(currentUserId) : false;
   const allComments = post.comments || [];
@@ -90,8 +93,12 @@ export default function FeedPost({
           <div
             className="relative shrink-0 cursor-pointer"
             onClick={() => {
-              if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
-                router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
+              if (post.author?.id) {
+                if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
+                  router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
+                } else {
+                  router.push(`/customer/profile/${post.author.id}`);
+                }
               }
             }}
           >
@@ -108,8 +115,12 @@ export default function FeedPost({
               <h3
                 className="font-semibold text-sm truncate cursor-pointer hover:underline"
                 onClick={() => {
-                  if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
-                    router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
+                  if (post.author?.id) {
+                    if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
+                      router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
+                    } else {
+                      router.push(`/customer/profile/${post.author.id}`);
+                    }
                   }
                 }}
               >
@@ -176,26 +187,28 @@ export default function FeedPost({
         {post.images && post.images.length > 0 && (
           <div className="mt-3">
             {post.images.length === 1 ? (
-              <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden">
-                <img src={post.images[0]} alt="Post image" className="w-full h-full object-cover" />
+              <div
+                className="w-full bg-muted rounded-lg overflow-hidden cursor-pointer"
+                onClick={() => { setViewerIndex(0); setViewerOpen(true); }}
+              >
+                <img src={post.images[0]} alt="Post image" className="w-full object-cover max-h-80" />
               </div>
             ) : (
-              <div className="relative">
-                <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden">
-                  <img src={post.images[imageIndex]} alt="Post image" className="w-full h-full object-cover" />
-                </div>
-                <div className="absolute inset-x-0 bottom-2 flex justify-center gap-1">
-                  {post.images.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setImageIndex(i)}
-                      className={cn(
-                        "w-2 h-2 rounded-full transition-colors",
-                        i === imageIndex ? "bg-white" : "bg-white/50"
-                      )}
-                    />
-                  ))}
-                </div>
+              <div className="grid grid-cols-2 gap-0.5 rounded-lg overflow-hidden">
+                {post.images.slice(0, 4).map((img, i) => (
+                  <div
+                    key={i}
+                    className="relative bg-muted cursor-pointer aspect-square"
+                    onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    {i === 3 && post.images!.length > 4 && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="text-white text-lg font-bold">+{post.images!.length - 4}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -352,6 +365,17 @@ export default function FeedPost({
         onSendDeal={handleDealSend}
         sending={dealSending}
       />
+
+      {/* Image Viewer */}
+      {post.images && post.images.length > 0 && (
+        <ImageViewerModal
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          images={post.images}
+          initialIndex={viewerIndex}
+          alt="Post image"
+        />
+      )}
     </Card>
   );
 }

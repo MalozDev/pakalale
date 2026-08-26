@@ -7,6 +7,7 @@ import {
   X, Clock, ArrowRight, MessageSquare, Package, Tag, ChevronRight,
   AlertCircle, Plus, Phone
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import Header from "@/components/Header";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import DealModal from "@/components/DealModal";
@@ -233,7 +234,7 @@ function SearchResultsContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showBack title="Search" />
+      <Header title="Search" />
 
       <main className="p-3 sm:p-4 space-y-4 max-w-2xl mx-auto">
         {/* Search Bar */}
@@ -329,8 +330,15 @@ function SearchResultsContent() {
 
         {/* Loading */}
         {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card border border-border rounded-lg overflow-hidden">
+                <div className="flex items-center gap-3 p-3">
+                  <Skeleton className="h-16 w-16 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-1.5"><Skeleton className="h-3 w-32" /><Skeleton className="h-2 w-20" /><Skeleton className="h-3 w-20" /><div className="flex gap-2"><Skeleton className="h-2 w-10" /><Skeleton className="h-2 w-10" /></div></div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

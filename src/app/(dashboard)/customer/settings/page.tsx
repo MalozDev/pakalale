@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Bell, Shield, LogOut, Camera, Mail, Phone, MapPin, Loader2, Check, Image } from "lucide-react";
+import { User, Bell, Shield, LogOut, Camera, Mail, Phone, MapPin, Loader2, Check, Image } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,9 +89,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-1" />Back
-          </Button>
+          <div className="w-16" />
           <h1 className="text-sm font-bold">Settings</h1>
           <div className="w-16" />
         </div>
