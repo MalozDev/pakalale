@@ -115,6 +115,12 @@ export async function GET(request: NextRequest) {
     unreadCounts.forEach((u) => unreadMap.set(toStr(u._id), u.count));
     const totalUnread = unreadCounts.reduce((sum, u) => sum + u.count, 0);
 
+    // Count active deals (type=deal with non-terminal status)
+    const activeDealStatuses = ["pending", "negotiating", "confirmed"];
+    const totalDeals = chats.filter(
+      (c) => c.type === "deal" && c.dealInfo && activeDealStatuses.includes(c.dealInfo.status)
+    ).length;
+
     const result = {
       chats: chats.map((chat) => {
         const parts = (chat.participants || []).map((pid) => {
@@ -154,6 +160,7 @@ export async function GET(request: NextRequest) {
         };
       }),
       totalUnread,
+      totalDeals,
     };
     setCache(listCacheKey, result, 30_000); // 30s cache
     return NextResponse.json(result);
@@ -305,6 +312,45 @@ export async function PUT(request: NextRequest) {
       invalidateCache(`chat:messages:${chatId}`);
       invalidateCache(`chat:list:${senderId}`);
       return NextResponse.json({ success: true });
+    }
+
+    if (action === "updateDealStatus" && body.chatId && body.dealStatus) {
+      const validStatuses = ["pending", "negotiating", "confirmed", "completed", "cancelled"];
+      if (!validStatuses.includes(body.dealStatus)) {
+        return NextResponse.json({ error: "Invalid deal status" }, { status: 400 });
+      }
+      const chat = await Chat.findById(body.chatId);
+      if (!chat) return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+      if (!chat.dealInfo) return NextResponse.json({ error: "No deal in this chat" }, { status: 400 });
+
+      chat.dealInfo.status = body.dealStatus;
+      await chat.save();
+
+      // Invalidate caches
+      const chatParticipants = chat.participants.map((p) => toStr(p));
+      chatParticipants.forEach((p) => invalidateCache(`chat:list:${p}`));
+
+      // Create system message for status change
+      const statusLabels: Record<string, string> = {
+        pending: "Deal is pending",
+        negotiating: "Deal is being negotiated",
+        confirmed: "Deal has been confirmed ✓",
+        completed: "Deal has been completed ✓✓",
+        cancelled: "Deal has been cancelled ✗",
+      };
+      await Message.create({
+        chatId: body.chatId,
+        senderId: body.senderId || chat.participants[0],
+        senderName: "System",
+        senderRole: "customer",
+        content: statusLabels[body.dealStatus] || `Deal status: ${body.dealStatus}`,
+        type: "deal_update",
+        timestamp: new Date(),
+        isRead: false,
+        readBy: [],
+      });
+
+      return NextResponse.json({ success: true, dealInfo: chat.dealInfo });
     }
 
     if (action === "edit" && messageId && content) {

@@ -40,6 +40,10 @@ export default function Feed({ authorId }: FeedProps) {
   const [postLocation, setPostLocation] = useState("");
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
+  // Lazy-mount flags for dialogs
+  const [createPostMounted, setCreatePostMounted] = useState(false);
+  const [locationPickerMounted, setLocationPickerMounted] = useState(false);
+  const [tagPickerMounted, setTagPickerMounted] = useState(false);
   const [taggedShops, setTaggedShops] = useState<ShopData[]>([]);
   const [tagSearch, setTagSearch] = useState("");
 
@@ -219,7 +223,7 @@ export default function Feed({ authorId }: FeedProps) {
                 </AvatarFallback>
               </Avatar>
             </button>
-            <Button variant="outline" className="flex-1 justify-start text-muted-foreground text-sm h-9" onClick={() => setShowCreatePost(true)}>
+            <Button variant="outline" className="flex-1 justify-start text-muted-foreground text-sm h-9" onClick={() => { setCreatePostMounted(true); setShowCreatePost(true); }}>
               What&apos;s on your mind, {user?.firstName}?
             </Button>
           </div>
@@ -227,10 +231,10 @@ export default function Feed({ authorId }: FeedProps) {
             <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={handlePhotoPick}>
               <Image className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Photo</span>
             </Button>
-            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => setShowLocationPicker(true)}>
+            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => { setLocationPickerMounted(true); setShowLocationPicker(true); }}>
               <MapPin className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Location</span>
             </Button>
-            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => setShowTagPicker(true)}>
+            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => { setTagPickerMounted(true); setShowTagPicker(true); }}>
               <Tag className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Tag</span>
             </Button>
           </div>
@@ -278,6 +282,7 @@ export default function Feed({ authorId }: FeedProps) {
       </div>
 
       {/* Create Post Dialog */}
+      {createPostMounted && (
       <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md p-0">
           <DialogHeader className="p-3 border-b border-border"><DialogTitle className="text-sm font-bold">Create Post</DialogTitle></DialogHeader>
@@ -309,8 +314,8 @@ export default function Feed({ authorId }: FeedProps) {
 
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handlePhotoPick}><Image className="h-4 w-4 mr-1" />Photo</Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setShowLocationPicker(true)}><MapPin className="h-4 w-4 mr-1" />Location</Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setShowTagPicker(true)}><Tag className="h-4 w-4 mr-1" />Tag</Button>
+              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setLocationPickerMounted(true); setShowLocationPicker(true); }}><MapPin className="h-4 w-4 mr-1" />Location</Button>
+              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setTagPickerMounted(true); setShowTagPicker(true); }}><Tag className="h-4 w-4 mr-1" />Tag</Button>
             </div>
             <div className="flex justify-end">
               <Button size="sm" onClick={handleCreatePost} disabled={!newPostContent.trim() || posting} className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -320,8 +325,10 @@ export default function Feed({ authorId }: FeedProps) {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Location Picker Dialog */}
+      {locationPickerMounted && (
       <Dialog open={showLocationPicker} onOpenChange={setShowLocationPicker}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-sm p-4">
           <DialogTitle className="text-sm font-bold mb-3">Add Location</DialogTitle>
@@ -329,8 +336,10 @@ export default function Feed({ authorId }: FeedProps) {
           <Button variant="outline" onClick={() => { setPostLocation("Lusaka, Zambia"); setShowLocationPicker(false); }} className="w-full justify-start"><MapPin className="h-4 w-4 mr-2" />Lusaka, Zambia</Button>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Tag Picker Dialog */}
+      {tagPickerMounted && (
       <Dialog open={showTagPicker} onOpenChange={setShowTagPicker}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-sm p-0">
           <DialogHeader className="p-3 border-b border-border"><DialogTitle className="text-sm font-bold">Tag a Shop</DialogTitle></DialogHeader>
@@ -348,6 +357,7 @@ export default function Feed({ authorId }: FeedProps) {
           </div>
         </DialogContent>
       </Dialog>
+      )}
     </div>
   );
 }

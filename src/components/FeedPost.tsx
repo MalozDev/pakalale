@@ -50,6 +50,10 @@ export default function FeedPost({
   const [likeAnimating, setLikeAnimating] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  // Lazy-mount flags: only render modals after first open
+  const [contactMounted, setContactMounted] = useState(false);
+  const [dealMounted, setDealMounted] = useState(false);
+  const [viewerMounted, setViewerMounted] = useState(false);
 
   const isLiked = currentUserId ? (post.likedBy || []).includes(currentUserId) : false;
   const allComments = post.comments || [];
@@ -94,11 +98,7 @@ export default function FeedPost({
             className="relative shrink-0 cursor-pointer"
             onClick={() => {
               if (post.author?.id) {
-                if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
-                  router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
-                } else {
-                  router.push(`/customer/profile/${post.author.id}`);
-                }
+                router.push(`/customer/profile/${post.author.id}`);
               }
             }}
           >
@@ -116,11 +116,7 @@ export default function FeedPost({
                 className="font-semibold text-sm truncate cursor-pointer hover:underline"
                 onClick={() => {
                   if (post.author?.id) {
-                    if (post.author?.role === "shop_owner" && post.author?.shopLocationId) {
-                      router.push(`/customer/locations/${post.author.shopLocationId}${post.author?.shopId ? `?shopId=${post.author.shopId}` : ''}`);
-                    } else {
-                      router.push(`/customer/profile/${post.author.id}`);
-                    }
+                    router.push(`/customer/profile/${post.author.id}`);
                   }
                 }}
               >
@@ -189,7 +185,7 @@ export default function FeedPost({
             {post.images.length === 1 ? (
               <div
                 className="w-full bg-muted rounded-lg overflow-hidden cursor-pointer"
-                onClick={() => { setViewerIndex(0); setViewerOpen(true); }}
+                onClick={() => { setViewerMounted(true); setViewerIndex(0); setViewerOpen(true); }}
               >
                 <img src={post.images[0]} alt="Post image" className="w-full object-cover max-h-80" />
               </div>
@@ -199,7 +195,7 @@ export default function FeedPost({
                   <div
                     key={i}
                     className="relative bg-muted cursor-pointer aspect-square"
-                    onClick={() => { setViewerIndex(i); setViewerOpen(true); }}
+                    onClick={() => { setViewerMounted(true); setViewerIndex(i); setViewerOpen(true); }}
                   >
                     <img src={img} alt="" className="w-full h-full object-cover" />
                     {i === 3 && post.images!.length > 4 && (
@@ -273,7 +269,7 @@ export default function FeedPost({
             variant="ghost"
             size="sm"
             className="h-7 text-[10px] sm:text-[11px] text-muted-foreground px-1.5 sm:px-2"
-            onClick={() => setShowContactModal(true)}
+            onClick={() => { setContactMounted(true); setShowContactModal(true); }}
           >
             <Phone className="h-3.5 w-3.5 mr-0.5" />
             Contact
@@ -282,7 +278,7 @@ export default function FeedPost({
             <Button
               size="sm"
               className="h-7 text-[10px] sm:text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 px-1.5 sm:px-2"
-              onClick={() => setShowDealModal(true)}
+              onClick={() => { setDealMounted(true); setShowDealModal(true); }}
             >
               <ShoppingBag className="h-3.5 w-3.5 mr-0.5" />
               Deal
@@ -343,31 +339,35 @@ export default function FeedPost({
         </div>
       )}
 
-      <ContactModal
-        isOpen={showContactModal}
-        onClose={() => setShowContactModal(false)}
-        contact={{
-          id: post.author?.id || "",
-          name: post.author?.name || "Unknown",
-          role: post.author?.role || "customer",
-        }}
-        onMessageClick={() => { setShowContactModal(false); onContactShop(post.author?.id || ""); }}
-        onDealClick={() => { setShowContactModal(false); setShowDealModal(true); }}
-      />
+      {contactMounted && (
+        <ContactModal
+          isOpen={showContactModal}
+          onClose={() => setShowContactModal(false)}
+          contact={{
+            id: post.author?.id || "",
+            name: post.author?.name || "Unknown",
+            role: post.author?.role || "customer",
+          }}
+          onMessageClick={() => { setShowContactModal(false); onContactShop(post.author?.id || ""); }}
+          onDealClick={() => { setShowContactModal(false); setShowDealModal(true); setDealMounted(true); }}
+        />
+      )}
 
       {/* Deal Modal */}
-      <DealModal
-        isOpen={showDealModal}
-        onClose={() => setShowDealModal(false)}
-        productName={post.product?.name || post.content.slice(0, 50)}
-        productPrice={post.product?.price}
-        shopName={post.author?.name}
-        onSendDeal={handleDealSend}
-        sending={dealSending}
-      />
+      {dealMounted && (
+        <DealModal
+          isOpen={showDealModal}
+          onClose={() => setShowDealModal(false)}
+          productName={post.product?.name || post.content.slice(0, 50)}
+          productPrice={post.product?.price}
+          shopName={post.author?.name}
+          onSendDeal={handleDealSend}
+          sending={dealSending}
+        />
+      )}
 
       {/* Image Viewer */}
-      {post.images && post.images.length > 0 && (
+      {viewerMounted && post.images && post.images.length > 0 && (
         <ImageViewerModal
           isOpen={viewerOpen}
           onClose={() => setViewerOpen(false)}

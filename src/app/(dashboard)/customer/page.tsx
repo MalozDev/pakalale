@@ -40,20 +40,19 @@ export default function CustomerDashboard() {
   // Infinite horizontal auto-scroll for trending shops
   useEffect(() => {
     const container = scrollRef.current;
-    if (!container || trendingShops.length === 0) return;
+    if (!container || trendingShops.length === 0 || isPaused) return;
 
-    let scrollPos = 0;
+    let scrollPos = container.scrollLeft || 0;
     const speed = 0.5; // pixels per frame
 
     const animate = () => {
-      if (!isPaused && container) {
-        scrollPos += speed;
-        // Reset when we've scrolled through half (since we duplicate items)
-        if (scrollPos >= container.scrollWidth / 2) {
-          scrollPos = 0;
-        }
-        container.scrollLeft = scrollPos;
+      if (!container) return;
+      scrollPos += speed;
+      // Reset when we've scrolled through half (since we duplicate items)
+      if (scrollPos >= container.scrollWidth / 2) {
+        scrollPos = 0;
       }
+      container.scrollLeft = scrollPos;
       animRef.current = requestAnimationFrame(animate);
     };
 

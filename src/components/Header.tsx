@@ -26,19 +26,40 @@ export default function Header({ activeTab = "home", onTabChange, userId, title 
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const dealCount = useDealStore((s) => s.dealCount);
+  const setDealCount = useDealStore((s) => s.setDealCount);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
 
-  // Single initial fetch for counts — no polling (Socket.IO handles updates)
+  // Initial fetch for counts
   useEffect(() => {
     if (!userId) return;
-
-    // Fetch counts once on mount
     Promise.all([
       fetch(`/api/notifications?userId=${userId}`).then((r) => r.json()).then((d) => setUnreadCount(d.unreadCount || 0)).catch(() => {}),
-      fetch(`/api/chat?userId=${userId}`).then((r) => r.json()).then((d) => setChatUnreadCount(d.totalUnread || 0)).catch(() => {}),
+      fetch(`/api/chat?userId=${userId}`).then((r) => r.json()).then((d) => {
+        setChatUnreadCount(d.totalUnread || 0);
+        setDealCount(d.totalDeals || 0);
+      }).catch(() => {}),
     ]);
-  }, [userId, setUnreadCount]);
+  }, [userId, setUnreadCount, setDealCount]);
+
+  // Real-time chat unread updates via global socket events
+  useEffect(() => {
+    const handleCountUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.totalUnread !== undefined) {
+        setChatUnreadCount(detail.totalUnread);
+      }
+    };
+    const handleIncrement = () => {
+      setChatUnreadCount((prev) => prev + 1);
+    };
+    window.addEventListener("chat-unread-update", handleCountUpdate);
+    window.addEventListener("chat-unread-increment", handleIncrement);
+    return () => {
+      window.removeEventListener("chat-unread-update", handleCountUpdate);
+      window.removeEventListener("chat-unread-increment", handleIncrement);
+    };
+  }, []);
 
   const navItems = [
     { id: "home", label: "Home", icon: Home, href: "/customer" },

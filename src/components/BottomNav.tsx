@@ -23,14 +23,38 @@ export default function BottomNav() {
   const globalUnreadCount = useNotificationStore((s) => s.unreadCount);
   const [chatUnread, setChatUnread] = useState(0);
   const dealCount = useDealStore((s) => s.dealCount);
+  const setDealCount = useDealStore((s) => s.setDealCount);
 
+  // Initial fetch
   useEffect(() => {
     if (!user?.id) return;
     fetch(`/api/chat?userId=${user.id}`)
       .then((r) => r.json())
-      .then((d) => setChatUnread(d.totalUnread || 0))
+      .then((d) => {
+        setChatUnread(d.totalUnread || 0);
+        setDealCount(d.totalDeals || 0);
+      })
       .catch(() => {});
-  }, [user?.id]);
+  }, [user?.id, setDealCount]);
+
+  // Real-time updates via custom events from global socket
+  useEffect(() => {
+    const handleCountUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.totalUnread !== undefined) {
+        setChatUnread(detail.totalUnread);
+      }
+    };
+    const handleIncrement = () => {
+      setChatUnread((prev) => prev + 1);
+    };
+    window.addEventListener("chat-unread-update", handleCountUpdate);
+    window.addEventListener("chat-unread-increment", handleIncrement);
+    return () => {
+      window.removeEventListener("chat-unread-update", handleCountUpdate);
+      window.removeEventListener("chat-unread-increment", handleIncrement);
+    };
+  }, []);
 
   // Determine active tab based on current path
   const getActiveId = () => {

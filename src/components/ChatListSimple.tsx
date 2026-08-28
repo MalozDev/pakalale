@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MessageSquare, Loader2 } from "lucide-react";
+import { Search, MessageSquare, Filter, Inbox } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useChats, type ChatData } from "@/hooks/useApi";
+import { cn } from "@/lib/utils";
 
 interface ChatListSimpleProps {
   userId: string;
@@ -16,16 +17,30 @@ interface ChatListSimpleProps {
   onBack?: () => void;
 }
 
-export default function ChatListSimple({ userId, onChatSelect, onNewChat, onBack }: ChatListSimpleProps) {
+export default function ChatListSimple({
+  userId,
+  onChatSelect,
+  onNewChat,
+  onBack,
+}: ChatListSimpleProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { data, loading } = useChats(userId);
 
   const allChats = data?.chats || [];
-  const filteredChats = allChats.filter(
-    (chat) =>
-      chat.participants.some((p) => p.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      chat.lastMessage?.content?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const totalUnread = data?.totalUnread || 0;
+
+  const filteredChats = allChats
+    .filter(
+      (chat) =>
+        chat.participants.some(
+          (p) => p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        ) ||
+        chat.lastMessage?.content
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase())
+    )
+    .filter((chat) => !showUnreadOnly || (chat.unreadCount ?? 0) > 0);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -42,24 +57,62 @@ export default function ChatListSimple({ userId, onChatSelect, onNewChat, onBack
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-bold">Messages</h2>
-            <Badge variant="secondary" className="text-[10px]">
-              {filteredChats.length} chats
-            </Badge>
+            {totalUnread > 0 && (
+              <Badge
+                variant="secondary"
+                className="text-[10px] bg-pink-500/10 text-pink-500 border-0"
+              >
+                {totalUnread} unread
+              </Badge>
+            )}
           </div>
-          <Button size="sm" onClick={onNewChat} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button
+            size="sm"
+            onClick={onNewChat}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             <MessageSquare className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search chats..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-muted/50"
-          />
+        {/* Search + Unread filter */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-muted/50"
+            />
+          </div>
+          <Button
+            variant={showUnreadOnly ? "default" : "outline"}
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+          >
+            <Inbox
+              className={cn(
+                "h-4 w-4",
+                showUnreadOnly ? "text-primary-foreground" : ""
+              )}
+            />
+          </Button>
         </div>
+
+        {showUnreadOnly && (
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <Filter className="h-3 w-3" />
+            <span>Showing unread chats only</span>
+            <button
+              onClick={() => setShowUnreadOnly(false)}
+              className="text-primary hover:underline ml-1"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -69,7 +122,10 @@ export default function ChatListSimple({ userId, onChatSelect, onNewChat, onBack
               <div key={i} className="p-3 border-b border-border">
                 <div className="flex items-start gap-3">
                   <Skeleton className="h-11 w-11 rounded-full shrink-0" />
-                  <div className="flex-1 space-y-1.5"><Skeleton className="h-3 w-28" /><Skeleton className="h-2 w-40" /></div>
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3 w-28" />
+                    <Skeleton className="h-2 w-40" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -78,37 +134,107 @@ export default function ChatListSimple({ userId, onChatSelect, onNewChat, onBack
           <>
             {filteredChats.map((chat) => {
               const other = chat.otherParticipant;
+              const unread = chat.unreadCount ?? 0;
+              const hasUnread = unread > 0;
+
               return (
                 <button
                   key={chat.id}
                   onClick={() => onChatSelect(chat)}
-                  className="w-full p-3 border-b border-border hover:bg-muted/50 transition-colors text-left"
+                  className={cn(
+                    "w-full p-3 border-b border-border hover:bg-muted/50 transition-colors text-left",
+                    hasUnread && "bg-muted/30"
+                  )}
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
                       <Avatar className="h-11 w-11">
-                        <AvatarFallback className="bg-muted text-xs">
+                        <AvatarFallback
+                          className={cn(
+                            "text-xs",
+                            hasUnread
+                              ? "bg-primary/10 text-primary font-bold"
+                              : "bg-muted"
+                          )}
+                        >
                           {other?.name?.charAt(0) || "?"}
                         </AvatarFallback>
                       </Avatar>
+                      {/* Online indicator */}
+                      {other?.role && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
-                        <h3 className="text-sm font-semibold truncate">{other?.name || "Unknown"}</h3>
-                        <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                          {chat.lastMessageTime ? formatTime(chat.lastMessageTime) : ""}
+                        <h3
+                          className={cn(
+                            "text-sm truncate",
+                            hasUnread
+                              ? "font-bold"
+                              : "font-semibold"
+                          )}
+                        >
+                          {other?.name || "Unknown"}
+                        </h3>
+                        <span
+                          className={cn(
+                            "text-[10px] shrink-0 ml-2",
+                            hasUnread
+                              ? "text-primary font-semibold"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {chat.lastMessageTime
+                            ? formatTime(chat.lastMessageTime)
+                            : ""}
                         </span>
                       </div>
 
                       {chat.dealInfo && (
-                        <Badge variant="secondary" className="text-[9px] h-4 mb-1 bg-primary/10 text-primary">
-                          Deal: {chat.dealInfo.productName}
-                        </Badge>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Badge
+                            variant="secondary"
+                            className="text-[9px] h-4 bg-primary/10 text-primary"
+                          >
+                            {chat.dealInfo.productName}
+                          </Badge>
+                          {(() => {
+                            const statusColors: Record<string, string> = {
+                              pending: "bg-amber-400/10 text-amber-400",
+                              negotiating: "bg-blue-400/10 text-blue-400",
+                              confirmed: "bg-emerald-400/10 text-emerald-400",
+                              completed: "bg-emerald-500/10 text-emerald-500",
+                              cancelled: "bg-red-400/10 text-red-400",
+                            };
+                            return (
+                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${statusColors[chat.dealInfo!.status] || "bg-muted text-muted-foreground"}`}>
+                                {chat.dealInfo!.status}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       )}
 
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.content || "No messages yet"}</p>
+                        <p
+                          className={cn(
+                            "text-xs truncate",
+                            hasUnread
+                              ? "text-foreground font-medium"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {chat.lastMessage?.content || "No messages yet"}
+                        </p>
+
+                        {/* Unread count badge */}
+                        {hasUnread && (
+                          <span className="shrink-0 bg-pink-500 text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] flex items-center justify-center px-1">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -119,8 +245,16 @@ export default function ChatListSimple({ userId, onChatSelect, onNewChat, onBack
             {filteredChats.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <MessageSquare className="h-10 w-10 mb-3 opacity-50" />
-                <p className="text-sm font-medium">No chats found</p>
-                <p className="text-xs">{searchQuery ? "Try a different search" : "Start a new conversation"}</p>
+                <p className="text-sm font-medium">
+                  {showUnreadOnly ? "No unread chats" : "No chats found"}
+                </p>
+                <p className="text-xs">
+                  {searchQuery
+                    ? "Try a different search"
+                    : showUnreadOnly
+                      ? "All caught up!"
+                      : "Start a new conversation"}
+                </p>
               </div>
             )}
           </>

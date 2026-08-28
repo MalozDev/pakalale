@@ -366,7 +366,7 @@ export async function commentFeedPost(postId: string, userId: string, authorName
 
 // ── Chat ──
 export function useChats(userId: string | null) {
-  return useFetch<{ chats: ChatData[]; totalUnread: number }>(userId ? `/api/chat?userId=${userId}` : null, [userId]);
+  return useFetch<{ chats: ChatData[]; totalUnread: number; totalDeals: number }>(userId ? `/api/chat?userId=${userId}` : null, [userId]);
 }
 
 export function useChatMessages(chatId: string | null) {
@@ -380,11 +380,12 @@ export interface ChatData {
   otherParticipant?: { id: string; name: string; avatar?: string; role: string } | null;
   lastMessage?: { id: string; content: string; senderId: string; timestamp: string } | null;
   lastMessageTime: string;
+  unreadCount?: number;
   dealInfo?: {
     productName?: string;
     initialPrice?: number;
     finalPrice?: number;
-    status: string;
+    status: "pending" | "negotiating" | "confirmed" | "completed" | "cancelled";
   };
   isActive: boolean;
   createdAt: string;
@@ -430,6 +431,15 @@ export async function createChat(data: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function updateDealStatus(chatId: string, dealStatus: string, senderId: string) {
+  const res = await fetch("/api/chat", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "updateDealStatus", chatId, dealStatus, senderId }),
   });
   return res.json();
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { useGlobalSocket } from "@/hooks/useGlobalSocket";
 import BottomNav from "@/components/BottomNav";
 import { Loader2 } from "lucide-react";
 
@@ -15,6 +16,9 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const hasRunValidation = useRef(false);
+
+  // Global socket for real-time counts — must be called before any early returns
+  useGlobalSocket(user?.id);
 
   // Validate session once on first mount
   useEffect(() => {
