@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Shop from "@/models/Shop";
 import Product from "@/models/Product";
-import Order from "@/models/Order";
 import { getCached, setCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
@@ -41,6 +40,7 @@ export async function GET(request: NextRequest) {
 
     const sort = searchParams.get("sort") || "rating";
     const order = searchParams.get("order") === "asc" ? 1 : -1;
+    const trending = searchParams.get("trending") === "true";
 
     const id = searchParams.get("id");
     if (id) {
@@ -96,8 +96,9 @@ export async function GET(request: NextRequest) {
     if (cached) return NextResponse.json(cached);
 
     const shops = await Shop.find(query)
-      .sort({ [sort]: order })
-      .select("name description ownerId locationId status contact coverImage profileImage images specialties rating totalReviews totalViews createdAt updatedAt")
+      .sort(trending ? { updatedAt: -1 } : { [sort]: order })
+      .select("name ownerId locationId status profileImage specialties rating totalReviews totalViews createdAt updatedAt")
+      .limit(100)
       .lean();
 
     if (shops.length === 0) {
@@ -122,35 +123,56 @@ export async function GET(request: NextRequest) {
     const productCounts = await Product.aggregate([
       { $match: { shopId: { $in: shopIds } } },
       { $group: { _id: "$shopId", count: { $sum: 1 } } },
-    ]);
-    const countMap = new Map<string, number>();
+    ]);    const countMap = new Map<string, number>();
     productCounts.forEach((pc) => countMap.set(toStr(pc._id), pc.count));
 
-    const result = {
-      shops: shops.map((shop) => {
-        const owner = ownerMap.get(toStr(shop.ownerId));
-        return {
-          id: shop._id.toString(),
-          name: shop.name,
-          description: shop.description,
-          ownerId: owner
-            ? { id: toStr(shop.ownerId), firstName: owner.firstName, lastName: owner.lastName, email: owner.email, avatar: owner.avatar }
-            : { id: toStr(shop.ownerId) },
-          locationId: shop.locationId,
-          status: shop.status,
-          contact: shop.contact,
-          coverImage: shop.coverImage,
-          profileImage: shop.profileImage,
-          images: shop.images,
-          specialties: shop.specialties,
-          rating: shop.rating,
-          totalReviews: shop.totalReviews,
-          productCount: countMap.get(shop._id.toString()) || 0,
-          createdAt: shop.createdAt,
-          updatedAt: shop.updatedAt,
-        };
-      }),
-    };
+    // Build shop data with trending score
+    let shopsWithScore = shops.map((shop) => {
+      const owner = ownerMap.get(toStr(shop.ownerId));
+      const productCount = countMap.get(shop._id.toString()) || 0;
+
+      // Calculate trending score: views + products + rating + recency
+      const shopObj = shop as unknown as Record<string, unknown>;
+      let trendingScore = 0;
+      trendingScore += (Number(shopObj.totalViews) || 0) * 0.3;
+      trendingScore += productCount * 10;
+      trendingScore += (shop.rating || 0) * 20;
+      trendingScore += (shop.totalReviews || 0) * 5;
+      // Recency bonus (shops updated in last 7 days get a boost)
+      const daysSinceUpdate = (Date.now() - new Date(shop.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceUpdate < 1) trendingScore += 50;
+      else if (daysSinceUpdate < 7) trendingScore += 30;
+      else if (daysSinceUpdate < 30) trendingScore += 10;
+
+      return {
+        id: shop._id.toString(),
+        name: shop.name,
+        ownerId: owner
+          ? { id: toStr(shop.ownerId), firstName: owner.firstName, lastName: owner.lastName, email: owner.email, avatar: owner.avatar }
+          : { id: toStr(shop.ownerId) },
+        locationId: shop.locationId,
+        status: shop.status,
+        contact: shop.contact,
+        coverImage: shop.coverImage,
+        profileImage: shop.profileImage,
+        images: shop.images,
+        specialties: shop.specialties,
+        rating: shop.rating,
+        totalReviews: shop.totalReviews,
+        productCount,
+        totalViews: Number(shopObj.totalViews) || 0,
+        trendingScore,
+        createdAt: shop.createdAt,
+        updatedAt: shop.updatedAt,
+      };
+    });
+
+    // Sort by trending score if requested
+    if (trending) {
+      shopsWithScore.sort((a, b) => b.trendingScore - a.trendingScore);
+    }
+
+    const result = { shops: shopsWithScore };
     setCache(cacheKey, result, 60_000); // 60s cache
     return NextResponse.json(result);
   } catch (error) {

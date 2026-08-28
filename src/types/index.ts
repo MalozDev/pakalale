@@ -9,6 +9,7 @@ export interface User {
   location?: string;
   phone?: string;
   bio?: string;
+  interestedCategories?: string[];
   createdAt: string;
   updatedAt: string;
 }

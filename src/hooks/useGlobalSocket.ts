@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useDealStore } from "@/store/dealStore";
+import { useOnlineStore } from "@/store/onlineStore";
 
 const SOCKET_URL = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -16,6 +17,9 @@ export function useGlobalSocket(userId?: string) {
   const socketRef = useRef<Socket | null>(null);
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
   const incrementDealCount = useDealStore((s) => s.incrementDealCount);
+  const setOnlineUsers = useOnlineStore((s) => s.setOnlineUsers);
+  const addOnlineUser = useOnlineStore((s) => s.addUser);
+  const removeOnlineUser = useOnlineStore((s) => s.removeUser);
 
   useEffect(() => {
     if (!userId) return;
@@ -63,6 +67,19 @@ export function useGlobalSocket(userId?: string) {
       }
     });
 
+    // ── Global online status tracking ──
+    socket.on("online_users_list", (data: { users: string[] }) => {
+      setOnlineUsers(data.users);
+    });
+
+    socket.on("user_online", (data: { userId: string }) => {
+      addOnlineUser(data.userId);
+    });
+
+    socket.on("user_offline", (data: { userId: string }) => {
+      removeOnlineUser(data.userId);
+    });
+
     // ── Real-time deal count ──
     socket.on("new_deal", (data: { userId: string }) => {
       if (data.userId === userId) {
@@ -84,5 +101,5 @@ export function useGlobalSocket(userId?: string) {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [userId, setUnreadCount, incrementDealCount]);
+  }, [userId, setUnreadCount, incrementDealCount, setOnlineUsers, addOnlineUser, removeOnlineUser]);
 }

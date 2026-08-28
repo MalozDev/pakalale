@@ -161,22 +161,23 @@ export async function POST(request: NextRequest) {
       coordinates,
     });
 
-    // Notify shop owners in the same location about this demand
+    // Notify shop owners about this demand
+    const { createBulkNotifications } = await import("@/lib/notifications");
+    const ShopModel = (await import("@/models/Shop")).default;
+    // Try location-specific first, fall back to all shops
+    let shopQuery: Record<string, unknown> = {};
     if (locationId) {
-      const { createBulkNotifications } = await import("@/lib/notifications");
-      const ShopModel = (await import("@/models/Shop")).default;
-      const User = (await import("@/models/User")).default;
-      const shops = await ShopModel.find({ locationId }).select("ownerId").lean();
-      const ownerIds = [...new Set(shops.map((s) => toStr(s.ownerId)).filter((oid) => oid !== customerId))];
-      if (ownerIds.length > 0) {
+      shopQuery = { locationId };
+    }
+    const shops = await ShopModel.find(shopQuery).select("ownerId").lean();
+    const ownerIds = [...new Set(shops.map((s) => toStr(s.ownerId)).filter((oid) => oid !== customerId))];      if (ownerIds.length > 0) {
         await createBulkNotifications(ownerIds, {
           type: "shop",
-          title: "New customer request 📦",
+          title: "New customer request",
           message: `A customer is looking for: ${searchQuery}`,
-          actionUrl: "/customer/deals",
+          actionUrl: "/shop/feed",
         });
       }
-    }
 
     return NextResponse.json({
       demand: {

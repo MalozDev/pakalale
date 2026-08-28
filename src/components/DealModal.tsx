@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useModalBack } from "@/hooks/useModalBack";
 import { ShoppingBag, Minus, Plus, Loader2, MessageSquare } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ export default function DealModal({
   onSendDeal,
   sending,
 }: DealModalProps) {
+  useModalBack(isOpen, onClose);
+
   const [quantity, setQuantity] = useState(1);
   const [suggestedPrice, setSuggestedPrice] = useState(productPrice?.toString() || "");
   const [message, setMessage] = useState("");

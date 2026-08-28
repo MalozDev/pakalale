@@ -24,6 +24,7 @@ interface FeedPostProps {
     quantity: number;
     suggestedPrice: number;
     message: string;
+    productId?: string;
   }) => void;
   onContactShop: (shopOwnerId: string) => void;
   currentUserId?: string;
@@ -73,7 +74,7 @@ export default function FeedPost({
   const handleDealSend = async (data: { quantity: number; suggestedPrice: number; message: string }) => {
     setDealSending(true);
     try {
-      await onMakeDeal(post.product?.name || post.content.slice(0, 50), post.author!.id, data);
+      await onMakeDeal(post.product?.name || post.content.slice(0, 50), post.author!.id, { ...data, productId: post.product?.id });
       setShowDealModal(false);
     } finally {
       setDealSending(false);

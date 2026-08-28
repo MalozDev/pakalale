@@ -24,10 +24,10 @@ export default function OverviewPage() {
 
   const statCards = stats
     ? [
-        { icon: Eye, value: stats.totalViews.toLocaleString(), label: "Total Views", color: "text-blue-400", bg: "bg-blue-400/10" },
-        { icon: ShoppingBag, value: stats.totalOrders.toString(), label: "Orders", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+        { icon: Eye, value: (stats.shopTotalViews || stats.totalViews).toLocaleString(), label: "Shop Views", color: "text-blue-400", bg: "bg-blue-400/10" },
+        { icon: ShoppingBag, value: stats.totalOrders.toString(), label: "Deals", color: "text-emerald-400", bg: "bg-emerald-400/10" },
         { icon: DollarSign, value: `K${stats.totalRevenue.toLocaleString()}`, label: "Revenue", color: "text-yellow-400", bg: "bg-yellow-400/10" },
-        { icon: Star, value: stats.totalProducts.toString(), label: "Products", color: "text-purple-400", bg: "bg-purple-400/10" },
+        { icon: Star, value: `${stats.shopRating || 0} (${stats.shopReviews || 0})`, label: "Rating & Reviews", color: "text-purple-400", bg: "bg-purple-400/10" },
       ]
     : [];
 
@@ -40,7 +40,7 @@ export default function OverviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ShopNav userId={user?.id} />
+      <ShopNav />
       <main className="p-3 sm:p-4 space-y-4 max-w-5xl mx-auto">
         {/* Welcome */}
         <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-amber-golden/10 border-primary/20">
@@ -50,7 +50,7 @@ export default function OverviewPage() {
               <h2 className="text-lg font-bold">Welcome back, {user?.firstName}!</h2>
               <Store className="h-5 w-5 text-primary shrink-0" />
             </div>
-            <p className="text-sm text-muted-foreground mt-1">Manage your shop and grow your business</p>
+            <p className="text-sm text-muted-foreground mt-1">Your shop dashboard</p>
           </CardContent>
         </Card>
 
@@ -78,6 +78,28 @@ export default function OverviewPage() {
                 </Card>
               ))}
             </div>
+
+            {/* Key Metrics */}
+            {stats && (
+              <Card className="bg-card border-border">
+                <CardContent className="p-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-primary">{stats.conversionRate || 0}%</p>
+                      <p className="text-[10px] text-muted-foreground">Conversion</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-emerald-400">{stats.responseRate || 0}%</p>
+                      <p className="text-[10px] text-muted-foreground">Response Rate</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-yellow-400">K{stats.avgOrderValue?.toLocaleString() || 0}</p>
+                      <p className="text-[10px] text-muted-foreground">Avg Deal</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Recent Orders */}
             <Card className="bg-card border-border">

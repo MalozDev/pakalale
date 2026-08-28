@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import SuppressExtensionErrors from "@/components/SuppressExtensionErrors";
+import ContextMenuBlocker from "@/components/ContextMenuBlocker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} dark h-full`} suppressHydrationWarning>
       <body className="min-h-full bg-background text-foreground antialiased">
         <SuppressExtensionErrors />
+        <ContextMenuBlocker />
         {children}
         <Toaster
           position="top-right"

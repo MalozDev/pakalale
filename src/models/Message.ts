@@ -44,10 +44,14 @@ export interface IChat extends Document {
   participants: mongoose.Types.ObjectId[];
   dealInfo?: {
     dealId?: mongoose.Types.ObjectId;
+    productId?: mongoose.Types.ObjectId;
     productName?: string;
     productImage?: string;
     initialPrice?: number;
+    counterPrice?: number;
     finalPrice?: number;
+    lastOfferBy?: mongoose.Types.ObjectId;
+    quantity?: number;
     status: "pending" | "negotiating" | "confirmed" | "completed" | "cancelled";
   };
   lastMessage?: mongoose.Types.ObjectId;
@@ -63,10 +67,14 @@ const ChatSchema = new Schema<IChat>(
     participants: [{ type: Schema.Types.ObjectId, ref: "User", required: true }],
     dealInfo: {
       dealId: { type: Schema.Types.ObjectId },
+      productId: { type: Schema.Types.ObjectId, ref: "Product" },
       productName: { type: String },
       productImage: { type: String },
       initialPrice: { type: Number },
+      counterPrice: { type: Number },
       finalPrice: { type: Number },
+      lastOfferBy: { type: Schema.Types.ObjectId, ref: "User" },
+      quantity: { type: Number, default: 1 },
       status: {
         type: String,
         enum: ["pending", "negotiating", "confirmed", "completed", "cancelled"],

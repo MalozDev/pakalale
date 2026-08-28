@@ -1,6 +1,7 @@
 "use client";
 
 import { User, Bell, Shield, Moon, LogOut, HelpCircle } from "lucide-react";
+import { useModalBack } from "@/hooks/useModalBack";
 import { useAuthStore } from "@/store/authStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ isOpen, onClose, onLogout }: SettingsModalProps) {
+  useModalBack(isOpen, onClose);
   const { user } = useAuthStore();
 
   const sections = [

@@ -1,5 +1,6 @@
 "use client";
 
+import { useModalBack } from "@/hooks/useModalBack";
 import {
   X,
   User,
@@ -52,6 +53,8 @@ export default function ContactModal({
   onMessageClick,
   onDealClick,
 }: ContactModalProps) {
+  useModalBack(isOpen, onClose);
+
   const infoItems = [
     contact.shopName && { icon: Store, label: "Shop", value: contact.shopName, color: "text-primary" },
     contact.location && { icon: MapPin, label: "Location", value: contact.location, color: "text-teal-500" },

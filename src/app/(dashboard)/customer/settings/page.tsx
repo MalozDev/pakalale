@@ -27,6 +27,8 @@ export default function SettingsPage() {
     location: user?.location || "",
     bio: user?.bio || "",
   });
+  const [interestedCategories, setInterestedCategories] = useState<string[]>(user?.interestedCategories || []);
+  const [showCategories, setShowCategories] = useState(false);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -68,6 +70,7 @@ export default function SettingsPage() {
           userId: user.id,
           ...profileData,
           avatar: avatarPreview || undefined,
+          interestedCategories,
         }),
       });
       const data = await res.json();
@@ -186,6 +189,35 @@ export default function SettingsPage() {
                     <Textarea value={profileData.bio} onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })} rows={3} placeholder="Tell us about yourself..." className="resize-none" />
                   </div>
                 </div>
+
+                {/* Interested Categories */}
+                <div className="mt-4 space-y-2">
+                  <Label className="text-xs">Interests</Label>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {interestedCategories.map((cat) => (
+                      <span key={cat} className="flex items-center gap-1 text-xs bg-primary/10 text-primary rounded-full px-2 py-1">
+                        {cat}
+                        <button onClick={() => setInterestedCategories((prev) => prev.filter((c) => c !== cat))} className="ml-0.5">
+                          <span className="text-primary/60 hover:text-primary">x</span>
+                        </button>
+                      </span>
+                    ))}
+                    {interestedCategories.length === 0 && <span className="text-xs text-muted-foreground">No interests selected</span>}
+                  </div>
+                  <button onClick={() => setShowCategories(!showCategories)} className="text-xs text-primary hover:text-primary/80">
+                    {showCategories ? "Hide options" : "+ Add interests"}
+                  </button>
+                  {showCategories && (
+                    <div className="flex flex-wrap gap-1.5 p-2 bg-muted/50 rounded-lg">
+                      {["Electronics", "Fashion", "Food & Groceries", "Health & Beauty", "Home & Garden", "Sports", "Automotive", "Phone Accessories", "Jewelry", "Baby & Kids", "Furniture", "Books", "Toys"].filter((c) => !interestedCategories.includes(c)).map((cat) => (
+                        <button key={cat} onClick={() => setInterestedCategories((prev) => [...prev, cat])} className="px-2 py-1 bg-background border border-border rounded text-[10px] hover:border-primary/50 transition-colors">
+                          + {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={handleSave}

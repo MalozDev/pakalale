@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import ShopNav from "@/components/ShopNav";
-import { Plus, Search, Edit, XCircle, CheckCircle, Star, Loader2, Trash2, Package } from "lucide-react";
+import { Plus, Search, XCircle, CheckCircle, Star, Loader2, Trash2, Package, ImageIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/store/authStore";
 import { useProducts, updateProduct, deleteProduct, type ProductData } from "@/hooks/useApi";
+import AddProductModal from "@/components/modals/AddProductModal";
+import EditProductModal from "@/components/modals/EditProductModal";
 
 export default function ProductsPage() {
   const { user } = useAuthStore();
@@ -65,14 +67,14 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ShopNav userId={user?.id} />
+      <ShopNav />
       <main className="p-3 sm:p-4 space-y-4 max-w-5xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold">Products</h1>
             <p className="text-xs text-muted-foreground">Manage your inventory</p>
           </div>
-          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90"><Plus className="h-4 w-4 mr-1" />Add</Button>
+          <AddProductModal shopId={user?.id || ""} onProductAdded={refetch} />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -100,13 +102,22 @@ export default function ProductsPage() {
             {products.map((product) => (
               <Card key={product.id} className="bg-card border-border hover:border-primary/20 transition-colors">
                 <CardContent className="p-3">
+                  {product.images && product.images.length > 0 ? (
+                    <div className="w-full h-32 rounded-lg overflow-hidden bg-muted mb-2">
+                      <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-20 rounded-lg bg-muted/50 flex items-center justify-center mb-2">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                  )}
                   <div className="flex items-start justify-between mb-2">
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-sm truncate">{product.name}</h3>
                       <p className="text-[10px] text-muted-foreground line-clamp-1">{product.description}</p>
                     </div>
                     <div className="flex gap-1 shrink-0 ml-2">
-                      <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="h-3 w-3" /></Button>
+                      <EditProductModal product={product} onProductUpdated={refetch} />
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveProduct(product.id)}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   </div>

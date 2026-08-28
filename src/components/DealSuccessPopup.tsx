@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useModalBack } from "@/hooks/useModalBack";
 import { CheckCircle, ShoppingBag, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,8 @@ export default function DealSuccessPopup({
   onGoToChat,
   onContinueBrowsing,
 }: DealSuccessPopupProps) {
+  useModalBack(isOpen, onClose);
+
   // Auto-close after 5 seconds
   useEffect(() => {
     if (!isOpen) return;

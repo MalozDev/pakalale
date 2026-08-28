@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  MoreVertical,
   Reply,
   Copy,
   Trash2,
@@ -10,14 +9,16 @@ import {
   Check,
   CheckCheck,
   Loader2,
-  Forward,
   X,
 } from "lucide-react";
 import VoiceMessage from "./VoiceMessage";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/chat";
+
+// ── Global singleton: only one message menu open at a time ──
+let activeMenuId: string | null = null;
+let setActiveMenuGlobal: ((id: string | null) => void) | null = null;
 
 interface MessageBubbleProps {
   message: Message;
@@ -25,10 +26,8 @@ interface MessageBubbleProps {
   onReply?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
   onEdit?: (messageId: string, newContent: string) => void;
-  onForward?: (message: Message) => void;
   showAvatar?: boolean;
   isConsecutive?: boolean;
-  /** Whether this message is pending (sent locally but not yet confirmed by server) */
   isPending?: boolean;
 }
 
@@ -38,7 +37,6 @@ export default function MessageBubble({
   onReply,
   onDelete,
   onEdit,
-  onForward,
   showAvatar = false,
   isConsecutive = false,
   isPending = false,
@@ -49,9 +47,10 @@ export default function MessageBubble({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [showSwipeReply, setShowSwipeReply] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Touch gesture refs
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -60,13 +59,48 @@ export default function MessageBubble({
   const hasMovedRef = useRef(false);
 
   const isOwn = message.senderId === currentUserId;
-  const isTextMessage =
-    message.type === "text" || message.type === "deal_update";
+  const isTextMessage = message.type === "text" || message.type === "deal_update";
 
-  // ── Swipe-right-to-reply gesture ──
   const SWIPE_THRESHOLD = 60;
   const SWIPE_MAX = 120;
 
+  // ── Global menu singleton ──
+  useEffect(() => {
+    setActiveMenuGlobal = (id: string | null) => {
+      if (id !== message.id) {
+        setShowMenu(false);
+        setShowDeleteConfirm(false);
+        setMenuPos(null);
+      }
+    };
+    return () => {
+      if (activeMenuId === message.id) {
+        activeMenuId = null;
+        setActiveMenuGlobal = null;
+      }
+    };
+  }, [message.id]);
+
+  const openMenu = useCallback((x: number, y: number) => {
+    // Close any other open menu first
+    setActiveMenuGlobal?.(null);
+    activeMenuId = message.id;
+    setMenuPos({ x, y });
+    setShowMenu(true);
+    setShowDeleteConfirm(false);
+    navigator.vibrate?.(30);
+  }, [message.id]);
+
+  const closeMenu = useCallback(() => {
+    setShowMenu(false);
+    setShowDeleteConfirm(false);
+    setMenuPos(null);
+    if (activeMenuId === message.id) {
+      activeMenuId = null;
+    }
+  }, [message.id]);
+
+  // ── Touch gestures ──
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       const touch = e.touches[0];
@@ -74,16 +108,14 @@ export default function MessageBubble({
       isSwipingRef.current = false;
       hasMovedRef.current = false;
 
-      // Start long-press timer (500ms)
+      // Long press timer
       longPressTimerRef.current = setTimeout(() => {
         if (!hasMovedRef.current) {
-          setShowMenu(true);
-          // Haptic feedback on supported devices
-          navigator.vibrate?.(30);
+          openMenu(touch.clientX, touch.clientY);
         }
       }, 500);
     },
-    []
+    [openMenu]
   );
 
   const handleTouchMove = useCallback(
@@ -93,7 +125,6 @@ export default function MessageBubble({
       const dx = touch.clientX - touchStartRef.current.x;
       const dy = touch.clientY - touchStartRef.current.y;
 
-      // If moved more than 10px vertically, cancel swipe detection
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
@@ -102,7 +133,6 @@ export default function MessageBubble({
         return;
       }
 
-      // If moved more than 10px horizontally, it's a swipe
       if (Math.abs(dx) > 10) {
         hasMovedRef.current = true;
         if (longPressTimerRef.current) {
@@ -111,13 +141,12 @@ export default function MessageBubble({
         }
       }
 
-      // Only allow swipe-right for non-own messages, and swipe-left for own
       if (isOwn && dx > 0) return;
       if (!isOwn && dx < 0) return;
 
       if (Math.abs(dx) > 10) {
         isSwipingRef.current = true;
-        const offset = Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, dx * (isOwn ? 1 : 1)));
+        const offset = Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, dx));
         setSwipeOffset(offset);
         setShowSwipeReply(Math.abs(offset) > SWIPE_THRESHOLD);
       }
@@ -133,7 +162,6 @@ export default function MessageBubble({
 
     if (isSwipingRef.current && Math.abs(swipeOffset) > SWIPE_THRESHOLD) {
       onReply?.(message);
-      // Haptic feedback
       navigator.vibrate?.(20);
     }
 
@@ -143,19 +171,28 @@ export default function MessageBubble({
     touchStartRef.current = null;
   }, [swipeOffset, message, onReply]);
 
-  // Close menu on outside click
+  // ── Desktop: right-click to open menu ──
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      openMenu(e.clientX, e.clientY);
+    },
+    [openMenu]
+  );
+
+  // Close on outside click
   useEffect(() => {
+    if (!showMenu) return;
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
-        setShowDeleteConfirm(false);
+        closeMenu();
       }
     };
-    if (showMenu) document.addEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showMenu]);
+  }, [showMenu, closeMenu]);
 
-  // Cleanup long-press on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
@@ -206,11 +243,11 @@ export default function MessageBubble({
         )}
 
         <div
-          className="relative"
-          ref={menuRef}
+          className="relative no-context-menu"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onContextMenu={handleContextMenu}
           style={{
             transform: `translateX(${swipeOffset}px)`,
             transition: swipeOffset === 0 ? "transform 0.2s ease" : "none",
@@ -247,7 +284,7 @@ export default function MessageBubble({
 
           <div
             className={cn(
-              "px-3 py-2 rounded-2xl text-sm",
+              "px-3 py-2 rounded-2xl text-sm message-bubble-text",
               isOwn
                 ? "bg-primary text-primary-foreground rounded-br-md"
                 : "bg-muted text-foreground rounded-bl-md",
@@ -256,10 +293,7 @@ export default function MessageBubble({
             )}
           >
             {message.type === "voice" ? (
-              <VoiceMessage
-                audioBase64={message.content}
-                isOwn={isOwn}
-              />
+              <VoiceMessage audioBase64={message.content} isOwn={isOwn} />
             ) : isEditing ? (
               <div className="min-w-[180px]">
                 <textarea
@@ -275,7 +309,7 @@ export default function MessageBubble({
                       : "text-foreground placeholder:text-muted-foreground"
                   )}
                 />
-                <div className="flex items-center gap-1 mt-1">
+                <div className="flex items-center gap-1.5 mt-1">
                   <button
                     onClick={() => {
                       setEditContent(message.content);
@@ -285,42 +319,28 @@ export default function MessageBubble({
                   >
                     Cancel
                   </button>
-                  <span className="text-[10px] opacity-40">•</span>
+                  <span className="text-[10px] opacity-30">·</span>
                   <button
                     onClick={handleSaveEdit}
                     className="text-[10px] opacity-60 hover:opacity-100 font-medium"
                   >
                     Save
                   </button>
-                  <span className="text-[10px] opacity-40 ml-1">enter ↵</span>
+                  <span className="text-[10px] opacity-30 ml-0.5">enter ↵</span>
                 </div>
               </div>
             ) : (
-              <p className="whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
-            )}
-
-            {/* Edited indicator */}
-            {message.content !== message.content && (
-              <span className="text-[9px] opacity-50 italic">(edited)</span>
+              <p className="whitespace-pre-wrap break-words">{message.content}</p>
             )}
 
             <div
               className={cn(
                 "flex items-center justify-end gap-1 mt-0.5",
-                isOwn
-                  ? "text-primary-foreground/70"
-                  : "text-muted-foreground"
+                isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
               )}
             >
-              {/* Pending/loading indicator */}
-              {isPending && (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              )}
-              <span className="text-[10px]">
-                {formatTime(message.timestamp)}
-              </span>
+              {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+              <span className="text-[10px]">{formatTime(message.timestamp)}</span>
               {isOwn && !isPending && (
                 message.isRead && message.readBy.length > 0 ? (
                   <CheckCheck className="h-3 w-3 text-blue-400" />
@@ -330,118 +350,105 @@ export default function MessageBubble({
               )}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Context menu button — visible on hover (desktop) or tap (mobile) */}
-          <div
-            className={cn(
-              "absolute top-0 transition-opacity",
-              isOwn ? "right-full mr-1" : "left-full ml-1",
-              "opacity-0 group-hover:opacity-100",
-              "sm:opacity-0 sm:group-hover:opacity-100",
-              showMenu && "opacity-100"
-            )}
-          >
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-1 bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <MoreVertical className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Context menu */}
-          {showMenu && (
-            <div
-              className={cn(
-                "absolute top-0 z-20 bg-card border border-border rounded-xl shadow-xl min-w-[160px] py-1",
-                isOwn ? "right-full mr-2" : "left-full ml-2"
-              )}
-            >
+      {/* ── Context Menu (portal-like fixed positioning) ── */}
+      {showMenu && menuPos && (
+        <div
+          ref={menuRef}
+          className="fixed z-[100]"
+          style={{
+            left: `${Math.min(menuPos.x, window.innerWidth - 200)}px`,
+            top: `${Math.min(menuPos.y, window.innerHeight - 200)}px`,
+          }}
+        >
+          <div className="bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            {/* Icon row */}
+            <div className="flex items-center gap-0.5 p-1.5 border-b border-border">
               <button
                 onClick={() => {
                   onReply?.(message);
-                  setShowMenu(false);
+                  closeMenu();
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted w-full text-left"
+                className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-muted transition-colors"
+                title="Reply"
               >
-                <Reply className="h-3.5 w-3.5" /> Reply
+                <Reply className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[9px] text-muted-foreground">Reply</span>
               </button>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(message.content);
-                  setShowMenu(false);
+                  closeMenu();
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted w-full text-left"
+                className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-muted transition-colors"
+                title="Copy"
               >
-                <Copy className="h-3.5 w-3.5" /> Copy
+                <Copy className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[9px] text-muted-foreground">Copy</span>
               </button>
-              {onForward && (
-                <button
-                  onClick={() => {
-                    onForward?.(message);
-                    setShowMenu(false);
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted w-full text-left"
-                >
-                  <Forward className="h-3.5 w-3.5" /> Forward
-                </button>
-              )}
               {isOwn && isTextMessage && (
                 <button
                   onClick={() => {
                     setEditContent(message.content);
                     setIsEditing(true);
-                    setShowMenu(false);
+                    closeMenu();
                   }}
-                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted w-full text-left"
+                  className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-muted transition-colors"
+                  title="Edit"
                 >
-                  <Pencil className="h-3.5 w-3.5" /> Edit
+                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-[9px] text-muted-foreground">Edit</span>
                 </button>
               )}
               {isOwn && (
-                <>
-                  <div className="border-t border-border my-1" />
-                  {!showDeleteConfirm ? (
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="flex items-center gap-2 px-3 py-2 text-xs text-destructive hover:bg-destructive/10 w-full text-left"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
-                    </button>
-                  ) : (
-                    <div className="px-3 py-2">
-                      <p className="text-[10px] text-muted-foreground mb-1.5">
-                        Delete this message?
-                      </p>
-                      <div className="flex gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 text-[10px] px-2"
-                          onClick={() => setShowDeleteConfirm(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="h-6 text-[10px] px-2"
-                          onClick={() => {
-                            onDelete?.(message.id);
-                            setShowMenu(false);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <span className="text-[9px] text-destructive">Delete</span>
+                </button>
               )}
+              <button
+                onClick={closeMenu}
+                className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-muted transition-colors ml-auto"
+                title="Close"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
-          )}
+
+            {/* Delete confirmation */}
+            {showDeleteConfirm && (
+              <div className="p-2.5 bg-destructive/5">
+                <p className="text-[10px] text-muted-foreground mb-1.5 text-center">
+                  Delete this message?
+                </p>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-1.5 text-[10px] text-muted-foreground bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDelete?.(message.id);
+                      closeMenu();
+                    }}
+                    className="flex-1 py-1.5 text-[10px] text-white bg-destructive rounded-lg hover:bg-destructive/90 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

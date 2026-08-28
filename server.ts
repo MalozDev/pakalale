@@ -38,6 +38,11 @@ app.prepare().then(() => {
 
     socket.on("register", (userId: string) => {
       userSockets.set(userId, socket.id);
+      // Broadcast this user coming online to ALL connected clients
+      io.emit("user_online", { userId });
+      // Send current online user list to the newly connected user
+      const allOnlineUserIds = Array.from(userSockets.keys());
+      socket.emit("online_users_list", { users: allOnlineUserIds });
       console.log(`👤 User registered: ${userId} -> ${socket.id}`);
     });
 
@@ -98,6 +103,8 @@ app.prepare().then(() => {
             io.to(chatId).emit("user_left", { userId, chatId });
           }
         });
+        // Broadcast this user going offline to ALL connected clients
+        io.emit("user_offline", { userId });
         console.log(`👤 User disconnected: ${userId}`);
       }
       console.log(`🔌 Socket disconnected: ${socket.id}`);

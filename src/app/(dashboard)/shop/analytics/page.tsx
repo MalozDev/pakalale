@@ -23,7 +23,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ShopNav userId={user?.id} />
+      <ShopNav />
       <main className="p-3 sm:p-4 space-y-4 max-w-5xl mx-auto">
         <h1 className="text-lg font-bold flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />Analytics</h1>
 

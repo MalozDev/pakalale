@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useModalBack } from "@/hooks/useModalBack";
 import { Send, Paperclip, Smile, Phone, Video, ShoppingBag, MapPin, Star } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ export default function ChatModal({
   shopLocation = "Soweto Market",
   shopRating = 4.8,
 }: ChatModalProps) {
+  useModalBack(isOpen, onClose);
+
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
 

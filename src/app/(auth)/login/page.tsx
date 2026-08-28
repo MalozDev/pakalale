@@ -46,10 +46,20 @@ export default function LoginPage() {
         : null;
       sessionStorage.removeItem("redirectAfterLogin");
 
+      // Validate redirect URL matches user role
+      const isShopOwner = result.user.role === "shop_owner";
+      const isCustomerRoute = redirectUrl?.startsWith("/customer");
+      const isShopRoute = redirectUrl?.startsWith("/shop");
+
       if (redirectUrl && redirectUrl !== "/login" && redirectUrl !== "/signup") {
-        router.push(redirectUrl);
+        // Block cross-role redirects
+        if ((isShopOwner && isCustomerRoute) || (!isShopOwner && isShopRoute)) {
+          router.push(isShopOwner ? "/shop/overview" : "/customer");
+        } else {
+          router.push(redirectUrl);
+        }
       } else {
-        router.push(result.user.role === "shop_owner" ? "/shop/overview" : "/customer");
+        router.push(isShopOwner ? "/shop/overview" : "/customer");
       }
     } catch {
       setError("Network error. Please try again.");

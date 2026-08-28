@@ -106,7 +106,8 @@ export default function SignupPage() {
       const loginData = await loginRes.json();
       if (loginRes.ok && loginData.user) {
         login(loginData.user);
-        router.push("/customer");
+        // Role-based redirect
+        router.push(loginData.user.role === "shop_owner" ? "/shop/overview" : "/customer");
       }
     } catch {
       setError("Network error. Please try again.");
@@ -156,7 +157,8 @@ export default function SignupPage() {
       const loginData = await loginRes.json();
       if (loginRes.ok && loginData.user) {
         login(loginData.user);
-        router.push("/shop/overview");
+        // Role-based redirect (shop_owner goes to shop, customer to customer)
+        router.push(loginData.user.role === "shop_owner" ? "/shop/overview" : "/customer");
       }
     } catch {
       setError("Network error. Please try again.");

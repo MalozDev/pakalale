@@ -15,6 +15,30 @@ function toStr(val: unknown): string {
   return String(val);
 }
 
+function computeRankScore(post: Record<string, unknown>): number {
+  const now = Date.now();
+  const created = new Date(post.createdAt as string).getTime();
+  const ageHours = Math.max(1, (now - created) / (1000 * 60 * 60));
+
+  const likes = (post.likes as unknown[])?.length || 0;
+  const comments = (post.comments as unknown[])?.length || 0;
+  const shares = (post.shares as number) || 0;
+  const images = (post.images as unknown[])?.length || 0;
+
+  // Engagement score: weighted sum of interactions
+  const engagement = likes * 1 + comments * 2 + shares * 3 + images * 0.5;
+
+  // Recency decay: half-life of 6 hours (Facebook-style)
+  const recency = Math.pow(0.5, ageHours / 6);
+
+  // Content quality signals
+  const hasImages = images > 0 ? 1.2 : 1;
+  const isPromotion = post.isPromotion ? 1.3 : 1;
+
+  // Final score: engagement scaled by recency, boosted by content type
+  return (engagement + 1) * recency * hasImages * isPromotion;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -33,27 +57,59 @@ export async function GET(request: NextRequest) {
     const authorId = searchParams.get("authorId");
     if (authorId) query.authorId = authorId;
 
-    const page = parseInt(searchParams.get("page") || "1");
+    // Cursor-based pagination: cursor is the ISO date of the last post
+    const cursor = searchParams.get("cursor");
     const limit = parseInt(searchParams.get("limit") || "20");
-    const skip = (page - 1) * limit;
+    const mode = searchParams.get("mode") || "ranked"; // ranked | chronological
 
-    const cacheKey = `feed:${JSON.stringify({ filter, locationId, authorId, page, limit })}`;
+    if (cursor) {
+      const cursorDate = new Date(cursor);
+      query.createdAt = { $lt: cursorDate };
+    }
+
+    const cacheKey = `feed:${JSON.stringify({ filter, locationId, authorId, cursor, limit, mode })}`;
     const cached = getCached(cacheKey);
     if (cached) return NextResponse.json(cached);
 
-    const [posts, total] = await Promise.all([
-      FeedPost.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .select("content images authorId locationId likes comments shares isPromotion product postType createdAt updatedAt")
-        .lean(),
-      FeedPost.countDocuments(query),
-    ]);
+    // For ranked mode, fetch a larger pool to score and rank
+    const fetchLimit = mode === "ranked" ? Math.min(limit * 3, 60) : limit;
+
+    let posts: (Record<string, unknown> & { _rankScore?: number; _likesCount?: number; _commentsCount?: number })[] = await FeedPost.find(query)
+      .sort({ createdAt: -1 })
+      .limit(fetchLimit)
+      .select("content images authorId locationId shares isPromotion product postType createdAt updatedAt")
+      .lean() as unknown as (Record<string, unknown> & { _rankScore?: number })[];
+
+    // Get likes and comments counts via aggregation (avoids transferring full arrays)
+    const postIds = posts.map((p) => p._id);
+    const countsAgg = postIds.length > 0 ? await FeedPost.aggregate([
+      { $match: { _id: { $in: postIds } } },
+      { $project: {
+        likesCount: { $size: { $ifNull: ["$likes", []] } },
+        commentsCount: { $size: { $ifNull: ["$comments", []] } },
+      }},
+    ]) : [];
+    const countsMap = new Map<string, { likesCount: number; commentsCount: number }>();
+    countsAgg.forEach((c) => countsMap.set(c._id.toString(), { likesCount: c.likesCount, commentsCount: c.commentsCount }));
+    posts.forEach((p) => {
+      const counts = countsMap.get(String(p._id));
+      p._likesCount = counts?.likesCount || 0;
+      p._commentsCount = counts?.commentsCount || 0;
+    });
+
+    // For ranked mode: compute scores, sort by score, take top N
+    if (mode === "ranked" && posts.length > 0) {
+      posts = posts
+        .map((p) => ({ ...p, _rankScore: computeRankScore(p) }))
+        .sort((a, b) => (b._rankScore || 0) - (a._rankScore || 0))
+        .slice(0, limit);
+    }
+
+    const total = await FeedPost.countDocuments(query);
 
     if (posts.length === 0) {
-      const result = { posts: [], total, page, totalPages: Math.ceil(total / limit) };
-      setCache(cacheKey, result, 60_000);
+      const result = { posts: [], total, cursor: null, hasMore: false };
+      setCache(cacheKey, result, 30_000);
       return NextResponse.json(result);
     }
 
@@ -85,19 +141,20 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    const result = {
-      posts: posts.map((p) => {
+    const mappedPosts = posts.map((p: Record<string, unknown>) => {
         const authorObj = authorMap.get(toStr(p.authorId));
         const hasAuthor = !!authorObj;
         const ownerShop =
           hasAuthor && authorObj!.role === "shop_owner"
             ? shopByOwner.get(toStr(p.authorId))
             : undefined;
+        const images = (p.images as unknown[]) || [];
+        const product = p.product as Record<string, unknown> | undefined;
 
         return {
-          id: p._id.toString(),
-          content: p.content,
-          images: p.images,
+          id: String(p._id),
+          content: (() => { const c = String(p.content || ""); return c.length > 500 ? c.slice(0, 500) + "..." : c; })(),
+          images: images.slice(0, 3), // Max 3 images per post in feed list
           authorId: toStr(p.authorId),
           author: hasAuthor
             ? {
@@ -111,24 +168,32 @@ export async function GET(request: NextRequest) {
               }
             : null,
           locationId: p.locationId,
-          likes: p.likes?.length || 0,
-          likedBy: p.likes?.map((l) => l.toString()) || [],
-          comments: (p.comments || []).slice(0, 3), // Only return first 3 comments in list
-          commentsCount: p.comments?.length || 0,
+          likes: p._likesCount || 0,
+          likedBy: [],
+          comments: [],
+          commentsCount: p._commentsCount || 0,
           shares: p.shares,
           isPromotion: p.isPromotion,
-          product: p.product
-            ? { ...p.product, id: toStr(p.product.shopId), shopId: toStr(p.product.shopId) }
+          product: product
+            ? { ...product, id: toStr(product.shopId), shopId: toStr(product.shopId) }
             : undefined,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
         };
-      }),
+      });
+
+    // Cursor = createdAt of the last post for next page
+    const lastPost = mappedPosts[mappedPosts.length - 1];
+    const nextCursor = lastPost ? lastPost.createdAt : null;
+    const hasMore = mappedPosts.length === limit;
+
+    const result = {
+      posts: mappedPosts,
       total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      cursor: nextCursor,
+      hasMore,
     };
-    setCache(cacheKey, result, 60_000); // 60s cache — feed doesn't change that fast
+    setCache(cacheKey, result, 30_000);
     return NextResponse.json(result);
   } catch (error) {
     console.error("Feed GET error:", error);

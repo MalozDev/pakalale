@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { ArrowLeft, PhoneCall } from "lucide-react";
+import {
+  ArrowLeft,
+  PhoneCall,
+  ShoppingBag,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Handshake,
+  Tag,
+  Send,
+  Loader2,
+} from "lucide-react";
 import MessageBubble from "@/components/MessageBubble";
 import MessageInput from "@/components/MessageInput";
 import ChatListSimple from "@/components/ChatListSimple";
@@ -10,9 +21,42 @@ import { useAuthStore } from "@/store/authStore";
 import {
   useChatMessages,
   sendMessage,
+  updateDealStatus,
+  proposePrice,
   type ChatData,
   type MessageData,
 } from "@/hooks/useApi";
+
+const dealStatusConfig: Record<
+  string,
+  { label: string; color: string; icon: React.ElementType }
+> = {
+  pending: {
+    label: "Pending",
+    color: "text-amber-400 bg-amber-400/10 border-amber-400/20",
+    icon: Clock,
+  },
+  negotiating: {
+    label: "Negotiating",
+    color: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+    icon: Handshake,
+  },
+  confirmed: {
+    label: "Confirmed",
+    color: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
+    icon: CheckCircle2,
+  },
+  completed: {
+    label: "Completed",
+    color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+    icon: CheckCircle2,
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "text-red-400 bg-red-400/10 border-red-400/20",
+    icon: XCircle,
+  },
+};
 
 export default function ShopChatPage() {
   const { user } = useAuthStore();
@@ -25,6 +69,8 @@ export default function ShopChatPage() {
   } | null>(null);
 
   const [pendingMessages, setPendingMessages] = useState<MessageData[]>([]);
+  const [counterPriceInput, setCounterPriceInput] = useState("");
+  const [proposing, setProposing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const unreadDividerRef = useRef<HTMLDivElement>(null);
@@ -211,8 +257,74 @@ export default function ShopChatPage() {
     setReplyTo(null);
     setPendingMessages([]);
     setShowChatList(false);
+    setCounterPriceInput("");
     hasScrolledOnOpen.current = false;
     isUserScrolledUp.current = false;
+  };
+
+  // ── Deal actions ──
+  const handleDealAction = async (
+    status: "pending" | "negotiating" | "confirmed" | "completed" | "cancelled"
+  ) => {
+    if (!activeChat || !user) return;
+    try {
+      await updateDealStatus(activeChat.id, status, user.id);
+      setActiveChat((prev) =>
+        prev
+          ? {
+              ...prev,
+              dealInfo: prev.dealInfo
+                ? { ...prev.dealInfo, status }
+                : undefined,
+            }
+          : prev
+      );
+      refetchMessages();
+    } catch (e) {
+      console.error("Failed to update deal status:", e);
+    }
+  };
+
+  const handleProposePrice = async () => {
+    if (!activeChat || !user || !counterPriceInput) return;
+    const price = parseFloat(counterPriceInput);
+    if (isNaN(price) || price <= 0) return;
+
+    setProposing(true);
+    try {
+      const currentPrice =
+        activeChat.dealInfo?.counterPrice ||
+        activeChat.dealInfo?.initialPrice;
+      await proposePrice(
+        activeChat.id,
+        user.id,
+        "shop_owner",
+        price,
+        currentPrice
+      );
+      setActiveChat((prev) =>
+        prev?.dealInfo
+          ? {
+              ...prev,
+              dealInfo: {
+                ...prev.dealInfo,
+                counterPrice: price,
+                lastOfferBy: user.id,
+                status:
+                  prev.dealInfo.status === "pending"
+                    ? "negotiating"
+                    : prev.dealInfo.status,
+              },
+            }
+          : prev
+      );
+      setCounterPriceInput("");
+      refetchMessages();
+    } catch (e) {
+      console.error("Failed to propose price:", e);
+    } finally {
+      setProposing(false);
+    }
   };
 
   if (showChatList) {
@@ -232,85 +344,316 @@ export default function ShopChatPage() {
 
   return (
     <>
-    <div className="h-[100dvh] bg-background flex flex-col">
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border shrink-0">
-        <div className="flex items-center justify-between px-4 h-14">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setShowChatList(true);
-              setActiveChat(null);
-              setReplyTo(null);
-              setPendingMessages([]);
-            }}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="text-center min-w-0">
-            <h1 className="text-sm font-bold truncate">{otherName}</h1>
-            <p className="text-[10px] text-muted-foreground">
-              {activeChat?.dealInfo
-                ? `Deal: ${activeChat.dealInfo.productName}`
-                : "Customer"}
-            </p>
+      <div className="h-[100dvh] bg-background flex flex-col">
+        <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border shrink-0">
+          <div className="flex items-center justify-between px-4 h-14">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowChatList(true);
+                setActiveChat(null);
+                setReplyTo(null);
+                setPendingMessages([]);
+                setCounterPriceInput("");
+              }}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <div className="text-center min-w-0">
+              <h1 className="text-sm font-bold truncate">{otherName}</h1>
+              <p className="text-[10px] text-muted-foreground">
+                {activeChat?.dealInfo
+                  ? `Deal: ${activeChat.dealInfo.productName}`
+                  : "Customer"}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <PhoneCall className="h-4 w-4" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-            <PhoneCall className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+        </header>
 
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto flex flex-col p-3 pb-[60px]"
-        onScroll={handleScroll}
-      >
-        {/* Spacer pushes messages to the bottom — they grow upward from here */}
-        <div className="flex-1" />
-        {allMessages.map((message, idx) => (
-          <div key={message.id} className="mb-3">
-            {idx === unreadDividerIndex && (
-              <div ref={unreadDividerRef} className="flex items-center gap-2 my-4">
-                <div className="flex-1 h-px bg-primary/30" />
-                <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                  Unread messages
-                </span>
-                <div className="flex-1 h-px bg-primary/30" />
+        {/* ── Pinned Deal Banner ── */}
+        {activeChat?.type === "deal" && activeChat?.dealInfo && (
+          <div className="sticky top-14 z-50 border-b border-border bg-background/90 backdrop-blur-lg">
+            <div className="px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 bg-primary/10 rounded-lg shrink-0">
+                    <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold truncate">
+                      {activeChat.dealInfo.productName}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      {activeChat.dealInfo.initialPrice && (
+                        <span className="text-[10px] text-muted-foreground">
+                          Offer: K
+                          {activeChat.dealInfo.initialPrice.toLocaleString()}
+                        </span>
+                      )}
+                      {activeChat.dealInfo.counterPrice &&
+                        activeChat.dealInfo.counterPrice !==
+                          activeChat.dealInfo.initialPrice && (
+                          <>
+                            <span className="text-[10px] text-muted-foreground">
+                              →
+                            </span>
+                            <span className="text-[10px] text-primary font-bold">
+                              K
+                              {activeChat.dealInfo.counterPrice.toLocaleString()}
+                            </span>
+                          </>
+                        )}
+                    </div>
+                  </div>
+                </div>
+                {(() => {
+                  const cfg =
+                    dealStatusConfig[activeChat.dealInfo.status] ||
+                    dealStatusConfig.pending;
+                  const StatusIcon = cfg.icon;
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cfg.color}`}
+                    >
+                      <StatusIcon className="h-3 w-3" />
+                      {cfg.label}
+                    </span>
+                  );
+                })()}
               </div>
-            )}
-            <MessageBubble
-              message={message}
-              currentUserId={user?.id}
-              onReply={handleReply}
-              onDelete={handleDeleteMessage}
-              onEdit={handleEditMessage}
-              showAvatar={
-                idx === 0 ||
-                allMessages[idx - 1]?.senderId !== message.senderId
-              }
-              isConsecutive={
-                idx > 0 &&
-                allMessages[idx - 1]?.senderId === message.senderId
-              }
-              isPending={message.id.startsWith("pending-")}
-            />
-          </div>
-        ))}
-        <div ref={messagesEndRef} className="h-0" />
-      </div>
-    </div>
 
-    {/* Input — truly fixed, never moves */}
-    <div className="fixed left-0 right-0 bottom-0 z-40 bg-background border-t border-border">
-      <MessageInput
-        onSendMessage={handleSendMessage}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        placeholder={`Message ${otherName}...`}
-      />
-    </div>
+              {/* ── Deal action buttons — role-aware ── */}
+              {(() => {
+                const dealStatus = activeChat.dealInfo.status;
+
+                // Shop owner: pending deal → Accept / Negotiate / Decline
+                if (dealStatus === "pending") {
+                  return (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="h-7 text-[10px] flex-1 bg-emerald-500 text-white hover:bg-emerald-600"
+                          onClick={() =>
+                            handleDealAction("confirmed" as const)
+                          }
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Accept
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] flex-1"
+                          onClick={() =>
+                            handleDealAction("negotiating" as const)
+                          }
+                        >
+                          <Handshake className="h-3 w-3 mr-1" /> Negotiate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() =>
+                            handleDealAction("cancelled" as const)
+                          }
+                        >
+                          <XCircle className="h-3 w-3 mr-1" /> Decline
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Both: negotiating → counter-offer input with accept/cancel
+                if (dealStatus === "negotiating") {
+                  const lastOfferPrice =
+                    activeChat.dealInfo?.counterPrice ||
+                    activeChat.dealInfo?.initialPrice;
+                  const isMyOffer =
+                    activeChat.dealInfo?.lastOfferBy === user?.id;
+                  return (
+                    <div className="mt-2 space-y-2">
+                      {lastOfferPrice && (
+                        <div className="flex items-center gap-1.5">
+                          <Tag className="h-3 w-3 text-primary" />
+                          <span className="text-[10px] text-muted-foreground">
+                            {isMyOffer ? "Your counter:" : "Their offer:"}
+                          </span>
+                          <span className="text-[10px] font-bold text-primary">
+                            K{lastOfferPrice.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex gap-1.5">
+                        <div className="relative flex-1">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
+                            K
+                          </span>
+                          <input
+                            type="number"
+                            value={counterPriceInput}
+                            onChange={(e) =>
+                              setCounterPriceInput(e.target.value)
+                            }
+                            placeholder={
+                              lastOfferPrice
+                                ? `Counter (current: K${lastOfferPrice.toLocaleString()})`
+                                : "Your price"
+                            }
+                            className="w-full pl-5 pr-2 py-1.5 bg-muted border border-border rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-primary"
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && handleProposePrice()
+                            }
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-7 px-2 bg-primary text-primary-foreground"
+                          onClick={handleProposePrice}
+                          disabled={proposing || !counterPriceInput}
+                        >
+                          {proposing ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600 flex-1"
+                          onClick={() =>
+                            handleDealAction("confirmed" as const)
+                          }
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Accept{" "}
+                          {lastOfferPrice
+                            ? `K${lastOfferPrice.toLocaleString()}`
+                            : ""}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[9px] px-2 text-destructive border-destructive/30 flex-1"
+                          onClick={() =>
+                            handleDealAction("cancelled" as const)
+                          }
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Cancel Deal
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Both: confirmed → show agreed price
+                if (dealStatus === "confirmed") {
+                  const agreedPrice =
+                    activeChat.dealInfo?.counterPrice ||
+                    activeChat.dealInfo?.finalPrice ||
+                    activeChat.dealInfo?.initialPrice;
+                  return (
+                    <div className="mt-2 space-y-2">
+                      {agreedPrice && (
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                          <span className="text-[10px] text-emerald-400 font-semibold">
+                            Agreed price: K{agreedPrice.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="h-7 text-[10px] flex-1 bg-primary text-primary-foreground"
+                          onClick={() =>
+                            handleDealAction("completed" as const)
+                          }
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Mark Complete
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() =>
+                            handleDealAction("cancelled" as const)
+                          }
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
+            </div>
+          </div>
+        )}
+
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto flex flex-col p-3 pb-[60px]"
+          onScroll={handleScroll}
+        >
+          <div className="flex-1" />
+          {allMessages.map((message, idx) => (
+            <div key={message.id} className="mb-3">
+              {idx === unreadDividerIndex && (
+                <div
+                  ref={unreadDividerRef}
+                  className="flex items-center gap-2 my-4"
+                >
+                  <div className="flex-1 h-px bg-primary/30" />
+                  <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    Unread messages
+                  </span>
+                  <div className="flex-1 h-px bg-primary/30" />
+                </div>
+              )}
+              <MessageBubble
+                message={message}
+                currentUserId={user?.id}
+                onReply={handleReply}
+                onDelete={handleDeleteMessage}
+                onEdit={handleEditMessage}
+                showAvatar={
+                  idx === 0 ||
+                  allMessages[idx - 1]?.senderId !== message.senderId
+                }
+                isConsecutive={
+                  idx > 0 &&
+                  allMessages[idx - 1]?.senderId === message.senderId
+                }
+                isPending={message.id.startsWith("pending-")}
+              />
+            </div>
+          ))}
+          <div ref={messagesEndRef} className="h-0" />
+        </div>
+      </div>
+
+      <div className="fixed left-0 right-0 bottom-0 z-40 bg-background border-t border-border">
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          placeholder={`Message ${otherName}...`}
+        />
+      </div>
     </>
   );
 }

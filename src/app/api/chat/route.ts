@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Chat, Message } from "@/models/Message";
+import Product from "@/models/Product";
 import { getCached, setCache, invalidateCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
@@ -61,7 +62,8 @@ export async function GET(request: NextRequest) {
     // Fetch chats — minimal fields
     const chats = await Chat.find({ participants: userId, isActive: true })
       .sort({ lastMessageTime: -1 })
-      .select("type participants dealInfo lastMessage lastMessageTime isActive createdAt updatedAt")
+      .select("type participants dealInfo.productName dealInfo.initialPrice dealInfo.counterPrice dealInfo.status dealInfo.quantity lastMessage lastMessageTime isActive createdAt updatedAt")
+      .limit(100)
       .lean();
 
     if (chats.length === 0) {
@@ -323,8 +325,33 @@ export async function PUT(request: NextRequest) {
       if (!chat) return NextResponse.json({ error: "Chat not found" }, { status: 404 });
       if (!chat.dealInfo) return NextResponse.json({ error: "No deal in this chat" }, { status: 400 });
 
-      chat.dealInfo.status = body.dealStatus;
+      const previousStatus = chat.dealInfo.status;
+      chat.dealInfo.status = body.dealStatus as "pending" | "negotiating" | "confirmed" | "completed" | "cancelled";
       await chat.save();
+
+      // Reduce product stock when deal is completed + track lastSoldAt
+      if (body.dealStatus === "completed" && previousStatus !== "completed") {
+        const productId = chat.dealInfo.productId;
+        const quantity = chat.dealInfo.quantity || 1;
+
+        if (productId) {
+          try {
+            const product = await Product.findById(productId);
+            if (product) {
+              const newStock = Math.max(0, product.stock - quantity);
+              await Product.findByIdAndUpdate(productId, {
+                stock: newStock,
+                isAvailable: newStock > 0,
+                lastSoldAt: new Date(),
+                $inc: { reviews: 0 }, // touch updatedAt
+              });
+              invalidateCache("products:");
+            }
+          } catch (e) {
+            console.error("Failed to reduce stock:", e);
+          }
+        }
+      }
 
       // Invalidate caches
       const chatParticipants = chat.participants.map((p) => toStr(p));
@@ -349,6 +376,70 @@ export async function PUT(request: NextRequest) {
         isRead: false,
         readBy: [],
       });
+
+      return NextResponse.json({ success: true, dealInfo: chat.dealInfo });
+    }
+
+    if (action === "proposePrice" && body.chatId && body.price !== undefined) {
+      const chat = await Chat.findById(body.chatId);
+      if (!chat) return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+      if (!chat.dealInfo) return NextResponse.json({ error: "No deal in this chat" }, { status: 400 });
+
+      const price = Number(body.price);
+      if (isNaN(price) || price < 0) {
+        return NextResponse.json({ error: "Invalid price" }, { status: 400 });
+      }
+
+      // Update deal info with the counter-offer
+      chat.dealInfo.counterPrice = price;
+      chat.dealInfo.lastOfferBy = body.senderId;
+      // Auto-move to negotiating if still pending
+      if (chat.dealInfo.status === "pending") {
+        chat.dealInfo.status = "negotiating";
+      }
+      await chat.save();
+
+      // Determine who proposed
+      const User = (await import("@/models/User")).default;
+      const proposer = await User.findById(body.senderId).select("firstName lastName").lean();
+      const proposerName = proposer ? `${proposer.firstName} ${proposer.lastName}` : "Someone";
+
+      // Create system message about the counter-offer
+      const previousPrice = body.previousPrice;
+      let offerText = `${proposerName} proposed K${price.toLocaleString()}`;
+      if (previousPrice && previousPrice !== price) {
+        offerText = `${proposerName} countered K${price.toLocaleString()} (was K${previousPrice.toLocaleString()})`;
+      }
+
+      await Message.create({
+        chatId: body.chatId,
+        senderId: body.senderId,
+        senderName: "System",
+        senderRole: body.senderRole || "customer",
+        content: offerText,
+        type: "deal_update",
+        timestamp: new Date(),
+        isRead: false,
+        readBy: [],
+      });
+
+      // Invalidate caches
+      const chatParticipants = chat.participants.map((p) => toStr(p));
+      chatParticipants.forEach((p) => invalidateCache(`chat:list:${p}`));
+      invalidateCache(`chat:messages:${body.chatId}`);
+
+      // Notify the other party
+      const { createNotification } = await import("@/lib/notifications");
+      const recipientIds = chatParticipants.filter((p) => p !== body.senderId);
+      for (const recipientId of recipientIds) {
+        await createNotification({
+          userId: recipientId,
+          type: "deal",
+          title: `Counter-offer: K${price.toLocaleString()}`,
+          message: `${proposerName} proposed K${price.toLocaleString()} for ${chat.dealInfo.productName || "your deal"}.`,
+          actionUrl: `/customer/chat?chatId=${body.chatId}`,
+        });
+      }
 
       return NextResponse.json({ success: true, dealInfo: chat.dealInfo });
     }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Image, MapPin, Tag, TrendingUp, Star, Loader2, X, Search } from "lucide-react";
+import { Image, MapPin, Tag, TrendingUp, Star, Loader2, X, Search, Zap, Package, Megaphone, Sparkles, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import FeedPost from "./FeedPost";
 import { useAuthStore } from "@/store/authStore";
@@ -13,18 +13,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useFeed, useShops, createFeedPost, createChat, type FeedPostData, type ShopData } from "@/hooks/useApi";
+import { useInfiniteFeed, useShops, createFeedPost, createChat, type FeedPostData, type ShopData } from "@/hooks/useApi";
 
 type FilterType = "all" | "promotions" | "nearby";
 
 interface FeedProps {
   authorId?: string;
-}
-
-interface PostOverrides {
-  likes?: number;
-  likedBy?: string[];
-  comments?: FeedPostData["comments"];
 }
 
 export default function Feed({ authorId }: FeedProps) {
@@ -40,66 +34,116 @@ export default function Feed({ authorId }: FeedProps) {
   const [postLocation, setPostLocation] = useState("");
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
-  // Lazy-mount flags for dialogs
   const [createPostMounted, setCreatePostMounted] = useState(false);
   const [locationPickerMounted, setLocationPickerMounted] = useState(false);
   const [tagPickerMounted, setTagPickerMounted] = useState(false);
   const [taggedShops, setTaggedShops] = useState<ShopData[]>([]);
   const [tagSearch, setTagSearch] = useState("");
 
-  const { data: feedData, loading } = useFeed({ filter, authorId });
-  const serverPosts = feedData?.posts || [];
+  // Pull-to-refresh state
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Infinite scroll sentinel
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Use the infinite feed hook
+  const {
+    posts: feedPosts,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    refresh,
+    toggleLike,
+    addComment,
+    prependPost,
+  } = useInfiniteFeed({ filter, authorId });
+
   const { data: shopsData } = useShops();
   const allShops = shopsData?.shops || [];
 
-  const [localPosts, setLocalPosts] = useState<FeedPostData[]>([]);
-  const [overrides, setOverrides] = useState<Record<string, PostOverrides>>({});
+  // ── IntersectionObserver for infinite scroll ──
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
 
-  const serverPostsWithOverrides = serverPosts.map((post) => {
-    const ov = overrides[post.id];
-    if (!ov) return post;
-    return { ...post, likes: ov.likes ?? post.likes, likedBy: ov.likedBy ?? post.likedBy, comments: ov.comments ?? post.comments };
-  });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          loadMore();
+        }
+      },
+      { rootMargin: "200px" } // Start loading 200px before reaching bottom
+    );
 
-  const feedPosts = [...localPosts, ...serverPostsWithOverrides];
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, loadMore]);
+
+  // ── Pull to refresh (mobile) ──
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (window.scrollY <= 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === 0) return;
+    const distance = e.touches[0].clientY - touchStartY.current;
+    if (distance > 0 && window.scrollY <= 0) {
+      setPullDistance(Math.min(distance, 120));
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (pullDistance > 60) {
+      setIsRefreshing(true);
+      refresh();
+      setTimeout(() => {
+        setIsRefreshing(false);
+        setPullDistance(0);
+      }, 1500);
+    } else {
+      setPullDistance(0);
+    }
+    touchStartY.current = 0;
+  }, [pullDistance, refresh]);
+
+  // ── Scroll to top button ──
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 600);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // ── Like ──
-  const handleLike = useCallback(async (postId: string) => {
+  const handleLike = useCallback((postId: string) => {
     if (!user?.id) return;
-    setOverrides((prev) => {
-      const current = prev[postId] || {};
-      const serverPost = serverPosts.find((p) => p.id === postId);
-      const baseLikedBy = current.likedBy ?? serverPost?.likedBy ?? [];
-      const baseLikes = current.likes ?? serverPost?.likes ?? 0;
-      const isLiked = baseLikedBy.includes(user.id);
-      return {
-        ...prev,
-        [postId]: {
-          ...current,
-          likes: isLiked ? baseLikes - 1 : baseLikes + 1,
-          likedBy: isLiked ? baseLikedBy.filter((id) => id !== user.id) : [...baseLikedBy, user.id],
-        },
-      };
-    });
-    fetch("/api/feed", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: postId, action: "like", userId: user.id }) }).catch(() => {});
-  }, [user?.id, serverPosts]);
+    toggleLike(postId, user.id);
+  }, [user?.id, toggleLike]);
 
   // ── Comment ──
   const handleComment = useCallback((postId: string, authorName: string, content: string) => {
     if (!user?.id) return;
-    const newComment = { authorId: user.id, authorName, content, createdAt: new Date().toISOString() };
-    setOverrides((prev) => {
-      const current = prev[postId] || {};
-      const baseComments = current.comments ?? serverPosts.find((p) => p.id === postId)?.comments ?? [];
-      return { ...prev, [postId]: { ...current, comments: [newComment, ...baseComments] } };
-    });
-    fetch("/api/feed", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: postId, action: "comment", userId: user.id, comment: { authorName, content } }) }).catch(() => {});
-  }, [user?.id, serverPosts]);
+    addComment(postId, user.id, authorName, content);
+  }, [user?.id, addComment]);
 
-  const handleShare = () => {
-    const url = typeof window !== "undefined" ? window.location.origin : "";
+  const handleShare = (postId: string) => {
+    const url = typeof window !== "undefined" ? `${window.location.origin}/post/${postId}` : "";
     if (navigator.share) { navigator.share({ title: "Pakalale Post", url }).catch(() => {}); }
     else if (navigator.clipboard) { navigator.clipboard.writeText(url); }
+    // Track the share
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "feed_share", targetId: postId }),
+    }).catch(() => {});
   };
 
   // ── Location picker ──
@@ -159,11 +203,11 @@ export default function Feed({ authorId }: FeedProps) {
         images: postImages,
       });
       if (result?.post) {
-        setLocalPosts((prev) => [{
+        prependPost({
           ...result.post,
           author: { id: user.id, name: `${user.firstName} ${user.lastName}`, avatar: user.avatar, role: user.role as "customer" | "shop_owner" },
           likes: 0, likedBy: [], comments: [], commentsCount: 0, shares: 0,
-        }, ...prev]);
+        });
       }
       setNewPostContent("");
       setPostImages([]);
@@ -178,17 +222,13 @@ export default function Feed({ authorId }: FeedProps) {
   };
 
   // ── Deal ──
-  const handleMakeDeal = async (productName: string, shopOwnerId: string, dealData?: { quantity: number; suggestedPrice: number; message: string }) => {
+  const handleMakeDeal = async (productName: string, shopOwnerId: string, dealData?: { quantity: number; suggestedPrice: number; message: string; productId?: string }) => {
     if (!user?.id) return;
     try {
-      const chatsRes = await fetch(`/api/chat?userId=${user.id}`);
-      const chatsData = await chatsRes.json();
-      const existingChat = (chatsData.chats || []).find((c: { participants: { id: string }[]; type: string }) => c.type === "deal" && c.participants.some((p: { id: string }) => p.id === shopOwnerId));
-      let chatId = existingChat?.id;
-      if (!chatId) {
-        const res = await createChat({ type: "deal", participants: [user.id, shopOwnerId], dealInfo: { productName, quantity: dealData?.quantity, initialPrice: dealData?.suggestedPrice, status: "pending" } });
-        chatId = res?.chat?.id;
-      }
+      const dealInfo: Record<string, unknown> = { productName, quantity: dealData?.quantity, initialPrice: dealData?.suggestedPrice, status: "pending" };
+      if (dealData?.productId) dealInfo.productId = dealData.productId;
+      const res = await createChat({ type: "deal", participants: [user.id, shopOwnerId], dealInfo });
+      const chatId = res?.chat?.id;
       if (chatId && dealData) {
         const { sendMessage: sendMsg } = await import("@/hooks/useApi");
         await sendMsg({ chatId, senderId: user.id, senderName: `${user.firstName} ${user.lastName}`, senderRole: "customer", content: dealData.message, type: "deal_update" });
@@ -209,8 +249,77 @@ export default function Feed({ authorId }: FeedProps) {
     } catch (e) { console.error("Failed to create chat:", e); }
   };
 
+  // ── Post Templates for shop owners ──
+  const isShopOwner = user?.role === "shop_owner";
+
+  const templateContents: Record<string, string> = {
+    promotion: [
+      "FLASH SALE!",
+      "",
+      "[Product name] now only K[Price]!",
+      "",
+      "Was K[Original price] - [Discount]% OFF!",
+      "",
+      "Limited time only. Do not miss out!",
+      "",
+      "#Pakalale #Sale #Deals",
+    ].join("\n"),
+    "new-arrival": [
+      "NEW ARRIVAL!",
+      "",
+      "Just restocked! [Product name] is back in stock.",
+      "",
+      "K[Price] - [Quantity] units available",
+      "",
+      "Come grab yours before they are gone!",
+      "",
+      "#Pakalale #NewStock #FreshArrivals",
+    ].join("\n"),
+    featured: [
+      "FEATURED PRODUCT",
+      "",
+      "[Product name]",
+      "",
+      "[Why it is special - quality, durability, value]",
+      "",
+      "K[Price]",
+      "Available at our shop",
+      "",
+      "DM us or visit to order!",
+      "",
+      "#Pakalale #Featured #ShopLocal",
+    ].join("\n"),
+    custom: "",
+  };
+
+  const postTemplates = [
+    { id: "promotion", label: "Promotion", icon: Zap, color: "text-rose-400 bg-rose-400/10 border-rose-400/20" },
+    { id: "new-arrival", label: "New Stock", icon: Package, color: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
+    { id: "featured", label: "Featured", icon: Megaphone, color: "text-primary bg-primary/10 border-primary/20" },
+    { id: "custom", label: "Custom", icon: Sparkles, color: "text-muted-foreground bg-muted border-border" },
+  ];
+
+  const handleTemplateSelect = (templateId: string) => {
+    setCreatePostMounted(true);
+    setNewPostContent(templateContents[templateId] || "");
+    setShowCreatePost(true);
+  };
+
   return (
-    <div className="space-y-4">
+    <div
+      ref={scrollContainerRef}
+      className="space-y-4"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div className="flex justify-center py-2" style={{ height: isRefreshing ? 40 : pullDistance * 0.6 }}>
+          <Loader2 className={cn("h-5 w-5 text-primary", isRefreshing && "animate-spin")} />
+        </div>
+      )}
+
       {/* Create Post */}
       <Card className="bg-card border-border">
         <CardContent className="p-3 sm:p-4">
@@ -227,6 +336,23 @@ export default function Feed({ authorId }: FeedProps) {
               What&apos;s on your mind, {user?.firstName}?
             </Button>
           </div>
+
+          {/* Quick post templates for shop owners */}
+          {isShopOwner && (
+            <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 -mx-1 px-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+              {postTemplates.map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => handleTemplateSelect(template.id)}
+                  className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-all hover:scale-[1.02] active:scale-[0.98] ${template.color}`}
+                >
+                  <template.icon className="h-3.5 w-3.5" />
+                  {template.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={handlePhotoPick}>
               <Image className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Photo</span>
@@ -269,17 +395,49 @@ export default function Feed({ authorId }: FeedProps) {
         ) : feedPosts.length === 0 ? (
           <div className="text-center py-12"><TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" /><p className="text-sm font-medium">No posts yet</p><p className="text-xs text-muted-foreground">Be the first to share something!</p></div>
         ) : (
-          feedPosts.map((post) => (
-            <FeedPost key={post.id} post={post} onLike={handleLike} onComment={handleComment} onShare={handleShare} onMakeDeal={handleMakeDeal} onContactShop={handleContactShop} currentUserId={user?.id} currentUserName={user ? `${user.firstName} ${user.lastName}` : undefined} />
-          ))
+          <>
+            {feedPosts.map((post) => (
+              <FeedPost key={post.id} post={post} onLike={handleLike} onComment={handleComment} onShare={handleShare} onMakeDeal={handleMakeDeal} onContactShop={handleContactShop} currentUserId={user?.id} currentUserName={user ? `${user.firstName} ${user.lastName}` : undefined} />
+            ))}
+
+            {/* Load more sentinel — IntersectionObserver targets this */}
+            <div ref={loadMoreRef} className="py-2" />
+
+            {/* Loading more indicator */}
+            {loadingMore && (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <div key={`more-${i}`} className="bg-card border border-border rounded-lg p-4 space-y-3 opacity-60">
+                    <div className="flex items-center gap-2.5">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-1.5 flex-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-2 w-16" /></div>
+                    </div>
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* End of feed */}
+            {!hasMore && feedPosts.length > 0 && (
+              <div className="text-center py-6 text-xs text-muted-foreground">
+                You&apos;ve reached the end of the feed
+              </div>
+            )}
+          </>
         )}
-        {loading && feedPosts.length > 0 && [
-          <div key="loading-1" className="bg-card border border-border rounded-lg p-4 space-y-3 opacity-50">
-            <div className="flex items-center gap-2.5"><Skeleton className="h-10 w-10 rounded-full" /><div className="space-y-1.5 flex-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-2 w-16" /></div></div>
-            <Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-1/2" />
-          </div>
-        ]}
       </div>
+
+      {/* Scroll to top FAB */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-20 right-4 z-40 bg-primary text-primary-foreground rounded-full p-3 shadow-lg hover:bg-primary/90 transition-all sm:hidden"
+        >
+          <ChevronUp className="h-5 w-5" />
+        </button>
+      )}
 
       {/* Create Post Dialog */}
       {createPostMounted && (

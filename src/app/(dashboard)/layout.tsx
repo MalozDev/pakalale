@@ -55,6 +55,26 @@ export default function DashboardLayout({
   }
 
   const isCustomer = pathname.startsWith("/customer");
+  const isShop = pathname.startsWith("/shop");
+
+  // Role-based route protection
+  if (isCustomer && user.role === "shop_owner") {
+    router.replace("/shop/overview");
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isShop && user.role === "customer") {
+    router.replace("/customer");
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

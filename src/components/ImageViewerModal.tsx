@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useModalBack } from "@/hooks/useModalBack";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ImageViewerModalProps {
@@ -18,6 +19,8 @@ export default function ImageViewerModal({
   initialIndex = 0,
   alt = "",
 }: ImageViewerModalProps) {
+  useModalBack(isOpen, onClose);
+
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);

@@ -13,6 +13,9 @@ import {
   Clock,
   Handshake,
   Tag,
+  Send,
+  Star,
+  Loader2,
 } from "lucide-react";
 import MessageBubble from "@/components/MessageBubble";
 import MessageInput from "@/components/MessageInput";
@@ -24,6 +27,7 @@ import {
   useChatMessages,
   sendMessage,
   updateDealStatus,
+  proposePrice,
   type ChatData,
   type MessageData,
 } from "@/hooks/useApi";
@@ -360,6 +364,33 @@ export default function ChatPage() {
     enterChat(chat);
   };
 
+  // ── Counter-offer state ──
+  const [counterPriceInput, setCounterPriceInput] = useState("");
+  const [proposing, setProposing] = useState(false);
+
+  // Review state
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+
+  // Check if user has already reviewed this deal
+  useEffect(() => {
+    if (!activeChat?.id || !user?.id || activeChat.dealInfo?.status !== "completed") return;
+    setHasReviewed(false);
+    setReviewRating(0);
+    setReviewComment("");
+    fetch(`/api/reviews?shopId=${activeChat.otherParticipant?.shopId || activeChat.otherParticipant?.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const existing = (data.reviews || []).find(
+          (r: { dealId: string; customerId: string }) => r.dealId === activeChat.id && r.customerId === user.id
+        );
+        if (existing) setHasReviewed(true);
+      })
+      .catch(() => {});
+  }, [activeChat?.id, activeChat?.dealInfo?.status, user?.id]);
+
   // ── Deal status actions ──
   const handleDealAction = async (status: "pending" | "negotiating" | "confirmed" | "completed" | "cancelled") => {
     if (!activeChat || !user) return;
@@ -372,6 +403,73 @@ export default function ChatPage() {
       refetchMessages();
     } catch (e) {
       console.error("Failed to update deal status:", e);
+    }
+  };
+
+  const handleProposePrice = async () => {
+    if (!activeChat || !user || !counterPriceInput) return;
+    const price = parseFloat(counterPriceInput);
+    if (isNaN(price) || price <= 0) return;
+
+    setProposing(true);
+    try {
+      const currentPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
+      await proposePrice(
+        activeChat.id,
+        user.id,
+        "customer",
+        price,
+        currentPrice
+      );
+      setActiveChat((prev) =>
+        prev?.dealInfo
+          ? {
+              ...prev,
+              dealInfo: {
+                ...prev.dealInfo,
+                counterPrice: price,
+                lastOfferBy: user.id,
+                status: prev.dealInfo.status === "pending" ? "negotiating" : prev.dealInfo.status,
+              },
+            }
+          : prev
+      );
+      setCounterPriceInput("");
+      refetchMessages();
+    } catch (e) {
+      console.error("Failed to propose price:", e);
+    } finally {
+      setProposing(false);
+    }
+  };
+
+  // ── Submit review after deal completion ──
+  const handleSubmitReview = async () => {
+    if (!activeChat || !user || reviewRating === 0) return;
+    setSubmittingReview(true);
+    try {
+      const shopId = activeChat.otherParticipant?.shopId || activeChat.otherParticipant?.id;
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: user.id,
+          shopId,
+          productId: activeChat.dealInfo?.productId,
+          dealId: activeChat.id,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      });
+      if (res.ok) {
+        setHasReviewed(true);
+        setReviewRating(0);
+        setReviewComment("");
+      }
+    } catch (e) {
+      console.error("Failed to submit review:", e);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -529,24 +627,76 @@ export default function ChatPage() {
                 );
               }
 
-              // Customer: pending deal → waiting for shop owner
+              // Customer: pending deal → can propose their price or wait
               if (!isShopOwner && dealStatus === "pending") {
+                const lastOfferPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
                 return (
-                  <p className="text-[10px] text-muted-foreground mt-1.5">Awaiting shop owner&apos;s response...</p>
+                  <div className="mt-2 space-y-2">
+                    {lastOfferPrice && (
+                      <div className="flex items-center gap-1.5">
+                        <Tag className="h-3 w-3 text-primary" />
+                        <span className="text-[10px] text-muted-foreground">Your offer:</span>
+                        <span className="text-[10px] font-bold text-primary">K{lastOfferPrice.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex gap-1.5">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">K</span>
+                        <input
+                          type="number"
+                          value={counterPriceInput}
+                          onChange={(e) => setCounterPriceInput(e.target.value)}
+                          placeholder={lastOfferPrice ? `Counter (current: K${lastOfferPrice.toLocaleString()})` : "Your price"}
+                          className="w-full pl-5 pr-2 py-1.5 bg-muted border border-border rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-primary"
+                          onKeyDown={(e) => e.key === "Enter" && handleProposePrice()}
+                        />
+                      </div>
+                      <Button size="sm" className="h-7 px-2 bg-primary text-primary-foreground" onClick={handleProposePrice} disabled={proposing || !counterPriceInput}>
+                        <Send className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Propose your price or wait for the shop owner</p>
+                  </div>
                 );
               }
 
-              // Both: negotiating → send messages to discuss, confirm or cancel
+              // Both: negotiating → counter-offer input with accept/cancel
               if (dealStatus === "negotiating") {
+                const lastOfferPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
+                const isMyOffer = activeChat.dealInfo?.lastOfferBy === user?.id;
                 return (
-                  <div className="flex items-center justify-between mt-1.5">
-                    <p className="text-[10px] text-blue-400">Negotiating — send a message with your counter-offer</p>
-                    <div className="flex gap-1.5 shrink-0 ml-2">
-                      <Button size="sm" className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600" onClick={() => handleDealAction("confirmed" as const)}>
-                        Accept
+                  <div className="mt-2 space-y-2">
+                    {lastOfferPrice && (
+                      <div className="flex items-center gap-1.5">
+                        <Tag className="h-3 w-3 text-primary" />
+                        <span className="text-[10px] text-muted-foreground">
+                          {isMyOffer ? "Your counter:" : "Their counter:"}
+                        </span>
+                        <span className="text-[10px] font-bold text-primary">K{lastOfferPrice.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex gap-1.5">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">K</span>
+                        <input
+                          type="number"
+                          value={counterPriceInput}
+                          onChange={(e) => setCounterPriceInput(e.target.value)}
+                          placeholder={lastOfferPrice ? `Counter (current: K${lastOfferPrice.toLocaleString()})` : "Your price"}
+                          className="w-full pl-5 pr-2 py-1.5 bg-muted border border-border rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-primary"
+                          onKeyDown={(e) => e.key === "Enter" && handleProposePrice()}
+                        />
+                      </div>
+                      <Button size="sm" className="h-7 px-2 bg-primary text-primary-foreground" onClick={handleProposePrice} disabled={proposing || !counterPriceInput}>
+                        <Send className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 text-destructive border-destructive/30" onClick={() => handleDealAction("cancelled" as const)}>
-                        Cancel
+                    </div>
+                    <div className="flex gap-1.5">
+                      <Button size="sm" className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600 flex-1" onClick={() => handleDealAction("confirmed" as const)}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" />Accept {lastOfferPrice ? `K${lastOfferPrice.toLocaleString()}` : ""}
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 text-destructive border-destructive/30 flex-1" onClick={() => handleDealAction("cancelled" as const)}>
+                        <XCircle className="h-3 w-3 mr-1" />Cancel Deal
                       </Button>
                     </div>
                   </div>
@@ -555,14 +705,49 @@ export default function ChatPage() {
 
               // Both: confirmed → mark complete or cancel
               if (dealStatus === "confirmed") {
+                const agreedPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.finalPrice || activeChat.dealInfo?.initialPrice;
                 return (
-                  <div className="flex gap-2 mt-2">
-                    <Button size="sm" className="h-7 text-[10px] flex-1 bg-primary text-primary-foreground" onClick={() => handleDealAction("completed" as const)}>
-                      <CheckCircle2 className="h-3 w-3 mr-1" /> Mark Complete
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] flex-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleDealAction("cancelled" as const)}>
-                      <XCircle className="h-3 w-3 mr-1" /> Cancel
-                    </Button>
+                  <div className="mt-2 space-y-2">
+                    {agreedPrice && (
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                        <span className="text-[10px] text-emerald-400 font-semibold">Agreed price: K{agreedPrice.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">Deal confirmed! The shop owner will mark it complete when fulfilled.</p>
+                  </div>
+                );
+              }
+
+              // Completed → show review prompt
+              if (dealStatus === "completed" && !hasReviewed) {
+                return (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                      <span className="text-[10px] text-emerald-400 font-semibold">Deal completed!</span>
+                    </div>
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 space-y-2">
+                      <p className="text-[10px] font-medium">Rate your experience with {otherName}</p>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button key={star} onClick={() => setReviewRating(star)} className="transition-colors">
+                            <Star className={`h-5 w-5 ${star <= reviewRating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Add a comment (optional)"
+                        className="w-full text-[11px] p-2 bg-muted border border-border rounded resize-none"
+                        rows={2}
+                      />
+                      <Button size="sm" className="h-7 text-[10px] w-full bg-primary text-primary-foreground" onClick={handleSubmitReview} disabled={submittingReview || reviewRating === 0}>
+                        {submittingReview ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Star className="h-3 w-3 mr-1" />}
+                        Submit Review
+                      </Button>
+                    </div>
                   </div>
                 );
               }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, ShoppingBag, Star, MessageSquare, MapPin, Package, Info, Loader2 } from "lucide-react";
+import { useModalBack } from "@/hooks/useModalBack";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ const colorMap: Record<string, string> = {
 };
 
 export default function NotificationsModal({ isOpen, onClose, userId }: NotificationsModalProps) {
+  useModalBack(isOpen, onClose);
   const { data, loading, refetch } = useNotifications(userId);
 
   const notifications = data?.notifications || [];

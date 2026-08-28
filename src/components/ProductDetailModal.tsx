@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useModalBack } from "@/hooks/useModalBack";
 import { ShoppingBag, Star, Package, ChevronLeft, ChevronRight, Minus, Plus, X } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,20 @@ export default function ProductDetailModal({
   shopName,
   onMakeDeal,
 }: ProductDetailModalProps) {
+  useModalBack(isOpen, onClose);
+
   const [imageIndex, setImageIndex] = useState(0);
+
+  // Track product view when modal opens
+  useEffect(() => {
+    if (isOpen && product?.id) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "product_view", targetId: product.id, source: "feed" }),
+      }).catch(() => {});
+    }
+  }, [isOpen, product?.id]);
 
   const images = product.images && product.images.length > 0
     ? product.images

@@ -546,26 +546,18 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
             const ownerId = dealModal.shopOwnerId;
             if (!ownerId) return;
             try {
-              // Find existing deal chat or create new one (same as Feed)
-              const chatsRes = await fetch(`/api/chat?userId=${user.id}`);
-              const chatsJson = await chatsRes.json();
-              const existingChat = (chatsJson.chats || []).find(
-                (c: { participants: { id: string }[]; type: string }) => c.type === "deal" && c.participants.some((p: { id: string }) => p.id === ownerId)
-              );
-              let chatId = existingChat?.id;
-              if (!chatId) {
-                const createRes = await fetch("/api/chat", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    type: "deal",
-                    participants: [user.id, ownerId],
-                    dealInfo: { productName: dealModal.product!.name, quantity: data.quantity, initialPrice: data.suggestedPrice, status: "pending" },
-                  }),
-                });
-                const createJson = await createRes.json();
-                chatId = createJson.chat?.id;
-              }
+              // Always create a new deal chat
+              const createRes = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "deal",
+                  participants: [user.id, ownerId],
+                  dealInfo: { productName: dealModal.product!.name, productId: dealModal.product!.id, quantity: data.quantity, initialPrice: data.suggestedPrice, status: "pending" },
+                }),
+              });
+              const createJson = await createRes.json();
+              const chatId = createJson.chat?.id;
               // Send the deal message
               if (chatId) {
                 await fetch("/api/chat", {

@@ -200,16 +200,17 @@ export async function createProduct(data: Record<string, unknown>) {
 }
 
 // ── Shops ──
-export function useShops(params?: { locationId?: string; ownerId?: string; search?: string }) {
+export function useShops(params?: { locationId?: string; ownerId?: string; search?: string; trending?: boolean }) {
   const searchParams = new URLSearchParams();
   if (params?.locationId) searchParams.set("locationId", params.locationId);
   if (params?.ownerId) searchParams.set("ownerId", params.ownerId);
   if (params?.search) searchParams.set("search", params.search);
+  if (params?.trending) searchParams.set("trending", "true");
 
   const qs = searchParams.toString();
   const url = `/api/shops${qs ? `?${qs}` : ""}`;
 
-  return useFetch<{ shops: ShopData[] }>(url, [params?.locationId, params?.ownerId, params?.search]);
+  return useFetch<{ shops: ShopData[] }>(url, [params?.locationId, params?.ownerId, params?.search, params?.trending]);
 }
 
 export function useShop(id: string | null) {
@@ -234,6 +235,7 @@ export interface ShopData {
   productCount?: number;
   totalViews?: number;
   orderCount?: number;
+  trendingScore?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -299,6 +301,165 @@ export function useFeed(params?: { filter?: string; locationId?: string; authorI
   return useFetch<{ posts: FeedPostData[]; total: number }>(url, [params?.filter, params?.locationId, params?.authorId]);
 }
 
+// ── Infinite Feed (Facebook-style cursor pagination) ──
+export function useInfiniteFeed(params?: {
+  filter?: string;
+  locationId?: string;
+  authorId?: string;
+  mode?: "ranked" | "chronological";
+}) {
+  const [posts, setPosts] = useState<FeedPostData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const cursorRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // Build base query params
+  const buildUrl = useCallback((cursor?: string | null) => {
+    const sp = new URLSearchParams();
+    if (params?.filter && params.filter !== "all") sp.set("filter", params.filter);
+    if (params?.locationId) sp.set("locationId", params.locationId);
+    if (params?.authorId) sp.set("authorId", params.authorId);
+    sp.set("mode", params?.mode || "ranked");
+    sp.set("limit", "20");
+    if (cursor) sp.set("cursor", cursor);
+    return `/api/feed?${sp.toString()}`;
+  }, [params?.filter, params?.locationId, params?.authorId, params?.mode]);
+
+  // Initial load
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setPosts([]);
+    cursorRef.current = null;
+    setHasMore(true);
+    setError(null);
+
+    fetch(buildUrl(null))
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled || !mountedRef.current) return;
+        setPosts(data.posts || []);
+        cursorRef.current = data.cursor;
+        setHasMore(data.hasMore);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled || !mountedRef.current) return;
+        setError(err.message);
+        setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [buildUrl]);
+
+  // Load more (called by IntersectionObserver)
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore || !cursorRef.current) return;
+    setLoadingMore(true);
+
+    fetch(buildUrl(cursorRef.current))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mountedRef.current) return;
+        setPosts((prev) => [...prev, ...(data.posts || [])]);
+        cursorRef.current = data.cursor;
+        setHasMore(data.hasMore);
+        setLoadingMore(false);
+      })
+      .catch((err) => {
+        if (!mountedRef.current) return;
+        setError(err.message);
+        setLoadingMore(false);
+      });
+  }, [loadingMore, hasMore, buildUrl]);
+
+  // Refresh from top
+  const refresh = useCallback(() => {
+    setLoading(true);
+    cursorRef.current = null;
+    setHasMore(true);
+    setError(null);
+
+    fetch(buildUrl(null))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mountedRef.current) return;
+        setPosts(data.posts || []);
+        cursorRef.current = data.cursor;
+        setHasMore(data.hasMore);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!mountedRef.current) return;
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [buildUrl]);
+
+  // Optimistic like
+  const toggleLike = useCallback((postId: string, userId: string) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        const likedBy = p.likedBy || [];
+        const isLiked = likedBy.includes(userId);
+        return {
+          ...p,
+          likes: isLiked ? p.likes - 1 : p.likes + 1,
+          likedBy: isLiked ? likedBy.filter((id) => id !== userId) : [...likedBy, userId],
+        };
+      })
+    );
+    fetch("/api/feed", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: postId, action: "like", userId }),
+    }).catch(() => {});
+  }, []);
+
+  // Optimistic comment
+  const addComment = useCallback((postId: string, userId: string, authorName: string, content: string) => {
+    const newComment = { authorId: userId, authorName, content, createdAt: new Date().toISOString() };
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        return { ...p, comments: [newComment, ...p.comments], commentsCount: p.commentsCount + 1 };
+      })
+    );
+    fetch("/api/feed", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: postId, action: "comment", userId, comment: { authorName, content } }),
+    }).catch(() => {});
+  }, []);
+
+  // Add new post to top (optimistic)
+  const prependPost = useCallback((post: FeedPostData) => {
+    setPosts((prev) => [post, ...prev]);
+  }, []);
+
+  return {
+    posts,
+    loading,
+    loadingMore,
+    hasMore,
+    error,
+    loadMore,
+    refresh,
+    toggleLike,
+    addComment,
+    prependPost,
+  };
+}
+
 export interface FeedPostData {
   id: string;
   content: string;
@@ -326,6 +487,7 @@ export interface FeedPostData {
   shares: number;
   isPromotion: boolean;
   product?: {
+    id?: string;
     name: string;
     price: number;
     originalPrice?: number;
@@ -377,14 +539,18 @@ export interface ChatData {
   id: string;
   type: "deal" | "general";
   participants: Array<{ id: string; name: string; avatar?: string; role: string }>;
-  otherParticipant?: { id: string; name: string; avatar?: string; role: string } | null;
+  otherParticipant?: { id: string; name: string; avatar?: string; role: string; shopId?: string } | null;
   lastMessage?: { id: string; content: string; senderId: string; timestamp: string } | null;
   lastMessageTime: string;
   unreadCount?: number;
   dealInfo?: {
     productName?: string;
+    productId?: string;
     initialPrice?: number;
+    counterPrice?: number;
     finalPrice?: number;
+    lastOfferBy?: string;
+    quantity?: number;
     status: "pending" | "negotiating" | "confirmed" | "completed" | "cancelled";
   };
   isActive: boolean;
@@ -440,6 +606,15 @@ export async function updateDealStatus(chatId: string, dealStatus: string, sende
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "updateDealStatus", chatId, dealStatus, senderId }),
+  });
+  return res.json();
+}
+
+export async function proposePrice(chatId: string, senderId: string, senderRole: "customer" | "shop_owner", price: number, previousPrice?: number) {
+  const res = await fetch("/api/chat", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "proposePrice", chatId, senderId, senderRole, price, previousPrice }),
   });
   return res.json();
 }
@@ -524,6 +699,11 @@ export interface AnalyticsData {
     avgOrderValue: number;
     conversionRate: number;
     totalStock: number;
+    shopRating?: number;
+    shopReviews?: number;
+    shopTotalViews?: number;
+    responseRate?: number;
+    avgResponseTime?: number;
   };
   ordersByStatus: Record<string, number>;
   recentOrders: Array<{

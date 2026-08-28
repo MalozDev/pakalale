@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useChats, type ChatData } from "@/hooks/useApi";
+import { useOnlineStore } from "@/store/onlineStore";
 import { cn } from "@/lib/utils";
 
 interface ChatListSimpleProps {
@@ -26,6 +27,7 @@ export default function ChatListSimple({
   const [searchQuery, setSearchQuery] = useState("");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { data, loading } = useChats(userId);
+  const onlineUserIds = useOnlineStore((s) => s.onlineUserIds);
 
   const allChats = data?.chats || [];
   const totalUnread = data?.totalUnread || 0;
@@ -161,8 +163,10 @@ export default function ChatListSimple({
                         </AvatarFallback>
                       </Avatar>
                       {/* Online indicator */}
-                      {other?.role && (
+                      {other?.id && onlineUserIds.has(other.id) ? (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
+                      ) : (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-muted-foreground/40 border-2 border-background rounded-full" />
                       )}
                     </div>
 

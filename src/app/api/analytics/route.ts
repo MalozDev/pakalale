@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Shop from "@/models/Shop";
 import Product from "@/models/Product";
-import Order from "@/models/Order";
+import { Chat, Message } from "@/models/Message";
+import { getCached, setCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
   if (!val) return "";
@@ -24,13 +25,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "shopId is required" }, { status: 400 });
     }
 
+    const cacheKey = `analytics:${shopIdParam}`;
+    const cached = getCached(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     // Resolve: if this is an ownerId (user ID), find the shop first
     let shopObjectId: mongoose.Types.ObjectId;
-    const existingShop = await Shop.findById(shopIdParam).select("_id").lean();
+    let ownerId = shopIdParam;
+    const existingShop = await Shop.findById(shopIdParam).select("_id ownerId").lean();
     if (existingShop) {
       shopObjectId = existingShop._id;
+      ownerId = toStr(existingShop.ownerId);
     } else {
-      // Try finding by ownerId
       const shopByOwner = await Shop.findOne({ ownerId: shopIdParam }).select("_id").lean();
       if (shopByOwner) {
         shopObjectId = shopByOwner._id;
@@ -39,92 +45,111 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [
-      totalProducts,
-      totalViews,
-      totalOrders,
-      ordersByStatus,
-      revenueAgg,
-      recentOrders,
-      topProducts,
-      totalStock,
-    ] = await Promise.all([
-      Product.countDocuments({ shopId: shopObjectId }),
+    // Use aggregation for deal stats instead of fetching all deals
+    const [dealStats, recentDealChats] = await Promise.all([
+      Chat.aggregate([
+        { $match: { participants: new mongoose.Types.ObjectId(ownerId), type: "deal", "dealInfo.status": { $exists: true } } },
+        { $group: {
+          _id: "$dealInfo.status",
+          count: { $sum: 1 },
+          revenue: { $sum: {
+            $cond: [{ $eq: ["$dealInfo.status", "completed"] },
+              { $ifNull: ["$dealInfo.counterPrice", "$dealInfo.initialPrice", 0] }, 0]
+          }}
+        }}
+      ]),
+      // Only fetch 5 most recent for the UI
+      Chat.find({ participants: ownerId, type: "deal", "dealInfo.status": { $exists: true } })
+        .select("type participants dealInfo lastMessageTime createdAt")
+        .sort({ lastMessageTime: -1 })
+        .limit(5)
+        .lean(),
+    ]);
 
+    // Build stats from aggregation
+    const dealStatusCounts: Record<string, number> = {};
+    let totalRevenue = 0;
+    let completedCount = 0;
+    dealStats.forEach((s) => {
+      dealStatusCounts[s._id] = s.count;
+      totalRevenue += s.revenue || 0;
+      if (s._id === "completed") completedCount = s.count;
+    });
+    const totalDeals = dealStats.reduce((sum, s) => sum + s.count, 0);
+    const activeCount = (dealStatusCounts["pending"] || 0) + (dealStatusCounts["negotiating"] || 0) + (dealStatusCounts["confirmed"] || 0);
+    const avgDealValue = completedCount > 0 ? Math.round(totalRevenue / completedCount) : 0;
+
+    // Single aggregation for all product stats + shop data
+    const [productAgg, topProducts] = await Promise.all([
       Product.aggregate([
         { $match: { shopId: shopObjectId } },
-        { $group: { _id: null, total: { $sum: "$views" } } },
+        { $group: {
+          _id: null,
+          totalProducts: { $sum: 1 },
+          totalViews: { $sum: "$views" },
+          totalStock: { $sum: "$stock" },
+        }},
       ]),
-
-      Order.countDocuments({ shopId: shopObjectId }),
-
-      Order.aggregate([
-        { $match: { shopId: shopObjectId } },
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-      ]),
-
-      Order.aggregate([
-        { $match: { shopId: shopObjectId, status: { $ne: "cancelled" } } },
-        { $group: { _id: null, total: { $sum: "$total" }, count: { $sum: 1 } } },
-      ]),
-
-      Order.find({ shopId: shopObjectId })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .populate("customerId", "firstName lastName")
-        .populate("items.productId", "name")
-        .lean(),
-
       Product.find({ shopId: shopObjectId })
         .sort({ views: -1 })
         .limit(5)
+        .select("name price views stock rating reviews")
         .lean(),
-
-      Product.aggregate([
-        { $match: { shopId: shopObjectId } },
-        { $group: { _id: null, total: { $sum: "$stock" } } },
-      ]),
     ]);
 
-    const totalRevenue = revenueAgg[0]?.total || 0;
-    const orderCount = revenueAgg[0]?.count || 0;
-    const avgOrderValue = orderCount > 0 ? Math.round(totalRevenue / orderCount) : 0;
-    const viewsCount = (totalViews[0]?.total as number) || 0;
-    const conversionRate = viewsCount > 0 ? ((totalOrders / viewsCount) * 100).toFixed(1) : "0";
+    const productStats = productAgg[0] || { totalProducts: 0, totalViews: 0, totalStock: 0 };
+    const viewsCount = productStats.totalViews || 0;
+    const conversionRate = viewsCount > 0 ? ((completedCount / viewsCount) * 100).toFixed(1) : "0";
 
-    const statusMap: Record<string, number> = {};
-    ordersByStatus.forEach((s) => { statusMap[s._id] = s.count; });
+    // Get shop data in same query batch
+    const shopData = await Shop.findById(shopObjectId)
+      .select("rating totalReviews totalViews responseRate avgResponseTime")
+      .lean();
 
-    return NextResponse.json({
+    // Get customer names for recent deals
+    const participantIds = [...new Set(
+      recentDealChats.flatMap((c) => c.participants.map((p) => toStr(p))).filter((p) => p !== ownerId)
+    )];
+    const User = (await import("@/models/User")).default;
+    const customers = participantIds.length > 0
+      ? await User.find({ _id: { $in: participantIds } })
+          .select("firstName lastName")
+          .lean()
+      : [];
+    const customerMap = new Map<string, { firstName: string; lastName: string }>();
+    customers.forEach((c) => customerMap.set(toStr(c._id), c as { firstName: string; lastName: string }));
+
+    const result = {
       stats: {
-        totalProducts,
+        totalProducts: productStats.totalProducts,
         totalViews: viewsCount,
-        totalOrders,
+        totalOrders: totalDeals,
         totalRevenue,
-        avgOrderValue,
+        avgOrderValue: avgDealValue,
         conversionRate: parseFloat(conversionRate),
-        totalStock: totalStock[0]?.total || 0,
+        totalStock: productStats.totalStock || 0,
+        shopRating: shopData?.rating || 0,
+        shopReviews: shopData?.totalReviews || 0,
+        shopTotalViews: shopData?.totalViews || 0,
+        responseRate: shopData?.responseRate || 0,
+        avgResponseTime: shopData?.avgResponseTime || 0,
       },
-      ordersByStatus: statusMap,
-      recentOrders: recentOrders.map((o) => {
-        const cust = o.customerId as unknown as Record<string, unknown> | null;
-        const customerName = cust && "firstName" in cust
-          ? `${cust.firstName} ${cust.lastName}`
-          : "Unknown";
-
-        const productNames = o.items.map((item) => {
-          const prod = item.productId as unknown as Record<string, unknown> | null;
-          return (prod?.name as string) || "Product";
-        }).join(", ");
+      ordersByStatus: dealStatusCounts,
+      recentOrders: recentDealChats.map((chat) => {
+        const otherParticipant = chat.participants
+          .map((p) => toStr(p))
+          .find((p) => p !== ownerId);
+        const customer = otherParticipant ? customerMap.get(otherParticipant) : null;
+        const customerName = customer ? `${customer.firstName} ${customer.lastName}` : "Customer";
+        const price = chat.dealInfo?.counterPrice || chat.dealInfo?.initialPrice || 0;
 
         return {
-          id: o._id.toString(),
+          id: chat._id.toString(),
           customer: customerName,
-          products: productNames,
-          total: o.total,
-          status: o.status,
-          paymentMethod: o.paymentMethod,
-          createdAt: o.createdAt,
+          products: chat.dealInfo?.productName || "Deal",
+          total: price,
+          status: chat.dealInfo?.status || "pending",
+          createdAt: chat.createdAt,
         };
       }),
       topProducts: topProducts.map((p) => ({
@@ -136,7 +161,9 @@ export async function GET(request: NextRequest) {
         rating: p.rating,
         reviews: p.reviews,
       })),
-    });
+    };
+    setCache(cacheKey, result, 60_000);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Analytics GET error:", error);
     return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });

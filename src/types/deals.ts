@@ -18,4 +18,5 @@ export interface Deal {
   unreadCount: number;
   location: string;
   isActive: boolean;
+  createdAt?: string;
 }

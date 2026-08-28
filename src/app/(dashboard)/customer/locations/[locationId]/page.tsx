@@ -54,6 +54,17 @@ export default function LocationDetailPage() {
     }
   }, [initialShopId, allShops, selectedShop]);
 
+  // Track shop view when a shop is selected
+  useEffect(() => {
+    if (selectedShop) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "shop_view", targetId: selectedShop }),
+      }).catch(() => {});
+    }
+  }, [selectedShop]);
+
   const shopProducts = productsData?.products || [];
   // Don't block the whole page — only block when NOT viewing a specific shop
   const loading = selectedShop ? false : (locLoading || shopsLoading);
@@ -77,27 +88,19 @@ export default function LocationDetailPage() {
 
     try {
       const ownerId = typeof currentShop.ownerId === "string" ? currentShop.ownerId : (currentShop.ownerId as { id: string }).id;
-      const chatsRes = await fetch(`/api/chat?userId=${user.id}`);
-      const chatsJson = await chatsRes.json();
-      const existingChat = (chatsJson.chats || []).find(
-        (c: { otherParticipant?: { id: string } }) => c.otherParticipant?.id === ownerId
-      );
-
-      let chatId: string;
-      if (existingChat) {
-        chatId = existingChat.id;
-      } else {
-        const createRes = await createChat({
-          type: "deal",
-          participants: [user.id, ownerId],
-          dealInfo: {
-            productName: dealProduct.name,
-            initialPrice: data.suggestedPrice,
-            status: "pending",
-          },
-        });
-        chatId = createRes.chat.id;
-      }
+      // Always create a new deal chat
+      const createRes = await createChat({
+        type: "deal",
+        participants: [user.id, ownerId],
+        dealInfo: {
+          productName: dealProduct.name,
+          productId: dealProduct.id,
+          quantity: data.quantity,
+          initialPrice: data.suggestedPrice,
+          status: "pending",
+        },
+      });
+      const chatId = createRes.chat.id;
 
       const senderName = `${user.firstName} ${user.lastName}`;
       await sendMessage({
