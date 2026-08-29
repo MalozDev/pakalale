@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, MessageSquare, Share, ShoppingBag, MapPin, Clock, CheckCircle, Phone, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,6 +72,26 @@ export default function FeedPost({
   // Determine profile path based on user role
   const profileBase = currentUserRole === "shop_owner" ? "/shop/profile" : "/customer/profile";
   const [viewerMounted, setViewerMounted] = useState(false);
+
+  // Video auto-play when in viewport
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const postRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
 
   const isLiked = currentUserId ? (post.likedBy || []).includes(currentUserId) : false;
   const allComments = post.comments || [];
@@ -206,7 +226,7 @@ export default function FeedPost({
                 onClick={() => { setViewerMounted(true); setViewerIndex(0); setViewerOpen(true); }}
               >
                 {isVideoUrl(post.images[0]) ? (
-                  <video src={post.images[0]} className="w-full max-h-80 object-cover" controls preload="metadata" />
+                  <video ref={videoRef} src={post.images[0]} className="w-full max-h-80 object-cover" controls playsInline preload="metadata" />
                 ) : (
                   <img src={post.images[0]} alt="Post image" className="w-full object-cover max-h-80" loading="lazy" />
                 )}

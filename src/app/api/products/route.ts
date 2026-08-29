@@ -47,9 +47,19 @@ export async function GET(request: NextRequest) {
       query.category = category;
     }
 
-    const shopId = searchParams.get("shopId");
-    if (shopId) {
-      query.shopId = shopId;
+    const shopIdParam = searchParams.get("shopId");
+    if (shopIdParam) {
+      // Resolve ownerId to Shop._id if needed
+      let resolvedShopId = shopIdParam;
+      const existingShop = await Shop.findById(shopIdParam).select("_id").lean();
+      if (!existingShop) {
+        // The passed ID might be an ownerId (user ID) — find the shop by ownerId
+        const shopByOwner = await Shop.findOne({ ownerId: shopIdParam }).select("_id").lean();
+        if (shopByOwner) {
+          resolvedShopId = shopByOwner._id.toString();
+        }
+      }
+      query.shopId = resolvedShopId;
     }
 
     const available = searchParams.get("available");
@@ -94,6 +104,18 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
     const body = await request.json();
+
+    // Resolve ownerId to Shop._id if the shopId is actually a user ID
+    if (body.shopId) {
+      const existingShop = await Shop.findById(body.shopId).select("_id").lean();
+      if (!existingShop) {
+        const shopByOwner = await Shop.findOne({ ownerId: body.shopId }).select("_id").lean();
+        if (shopByOwner) {
+          body.shopId = shopByOwner._id;
+        }
+      }
+    }
+
     const product = await Product.create(body);
     return NextResponse.json({ product: { ...product.toObject(), id: product._id.toString() } }, { status: 201 });
   } catch (error) {
