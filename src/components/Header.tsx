@@ -11,7 +11,10 @@ import AnimatedSearch from "./AnimatedSearch";
 import SearchOverlay from "./SearchOverlay";
 import { useDealStore } from "@/store/dealStore";
 import { useNotificationStore } from "@/store/notificationStore";
+import { useCountPolling } from "@/hooks/useCountPolling";
 import { cn } from "@/lib/utils";
+
+const POLL_INTERVAL = 30_000;
 
 interface HeaderProps {
   activeTab?: string;
@@ -30,16 +33,36 @@ export default function Header({ activeTab = "home", onTabChange, userId, title 
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
 
-  // Initial fetch for counts
+  // Start polling for notification + deal counts
+  useCountPolling(userId);
+
+  // Initial fetch + periodic polling for chat unread
   useEffect(() => {
     if (!userId) return;
-    Promise.all([
-      fetch(`/api/notifications?userId=${userId}`).then((r) => r.json()).then((d) => setUnreadCount(d.unreadCount || 0)).catch(() => {}),
-      fetch(`/api/chat?userId=${userId}`).then((r) => r.json()).then((d) => {
+
+    const fetchChatCount = async () => {
+      try {
+        const res = await fetch(`/api/chat?userId=${userId}`);
+        if (!res.ok) return;
+        const d = await res.json();
         setChatUnreadCount(d.totalUnread || 0);
         setDealCount(d.totalDeals || 0);
-      }).catch(() => {}),
-    ]);
+      } catch { /* ignore */ }
+    };
+
+    fetchChatCount();
+    const iv = setInterval(fetchChatCount, POLL_INTERVAL);
+
+    // Refetch when user returns to tab
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchChatCount();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [userId, setUnreadCount, setDealCount]);
 
   // Real-time chat unread updates via global socket events

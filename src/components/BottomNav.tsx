@@ -7,7 +7,10 @@ import { Home, MessageSquare, MapPin, ShoppingBag, Bell } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useDealStore } from "@/store/dealStore";
+import { useCountPolling } from "@/hooks/useCountPolling";
 import { cn } from "@/lib/utils";
+
+const POLL_INTERVAL = 30_000; // 30 seconds
 
 const navItems = [
   { id: "home", label: "Home", icon: Home, href: "/customer" },
@@ -25,16 +28,36 @@ export default function BottomNav() {
   const dealCount = useDealStore((s) => s.dealCount);
   const setDealCount = useDealStore((s) => s.setDealCount);
 
-  // Initial fetch
+  // Start polling for notification + deal counts
+  useCountPolling(user?.id);
+
+  // Initial fetch + periodic polling for chat unread
   useEffect(() => {
     if (!user?.id) return;
-    fetch(`/api/chat?userId=${user.id}`)
-      .then((r) => r.json())
-      .then((d) => {
+
+    const fetchChatCount = async () => {
+      try {
+        const res = await fetch(`/api/chat?userId=${user.id}`);
+        if (!res.ok) return;
+        const d = await res.json();
         setChatUnread(d.totalUnread || 0);
         setDealCount(d.totalDeals || 0);
-      })
-      .catch(() => {});
+      } catch { /* ignore */ }
+    };
+
+    fetchChatCount();
+    const iv = setInterval(fetchChatCount, POLL_INTERVAL);
+
+    // Refetch when user returns to tab
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchChatCount();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [user?.id, setDealCount]);
 
   // Real-time updates via custom events from global socket

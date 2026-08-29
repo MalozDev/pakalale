@@ -5,7 +5,11 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Home, Package, ShoppingBag, Store, MessageSquare, Bell } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useNotificationStore } from "@/store/notificationStore";
+import { useDealStore } from "@/store/dealStore";
 import { cn } from "@/lib/utils";
+
+const POLL_INTERVAL = 30_000;
 
 const navItems = [
   { id: "home", label: "Home", icon: Home, href: "/shop/feed" },
@@ -18,25 +22,62 @@ const navItems = [
 export default function ShopBottomNav() {
   const pathname = usePathname();
   const { user } = useAuthStore();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
+  const dealCount = useDealStore((s) => s.dealCount);
+  const setDealCount = useDealStore((s) => s.setDealCount);
+  const [chatUnread, setChatUnread] = useState(0);
 
-  // Fetch notification count
+  // Poll for all counts
   useEffect(() => {
     if (!user?.id) return;
-    fetch(`/api/notifications?userId=${user.id}`)
-      .then((r) => r.json())
-      .then((d) => setUnreadCount(d.unreadCount || 0))
-      .catch(() => {});
-  }, [user?.id]);
 
-  // Refetch on pathname change
+    const fetchCounts = async () => {
+      try {
+        const [notifRes, chatRes] = await Promise.all([
+          fetch(`/api/notifications?userId=${user.id}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+          fetch(`/api/chat?userId=${user.id}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]);
+        if (notifRes?.unreadCount !== undefined) setUnreadCount(notifRes.unreadCount);
+        if (chatRes) {
+          setChatUnread(chatRes.totalUnread || 0);
+          setDealCount(chatRes.totalDeals || 0);
+        }
+      } catch { /* ignore */ }
+    };
+
+    fetchCounts();
+    const iv = setInterval(fetchCounts, POLL_INTERVAL);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchCounts();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [user?.id, setUnreadCount, setDealCount]);
+
+  // Real-time updates via socket custom events
   useEffect(() => {
-    if (!user?.id) return;
-    fetch(`/api/notifications?userId=${user.id}`)
-      .then((r) => r.json())
-      .then((d) => setUnreadCount(d.unreadCount || 0))
-      .catch(() => {});
-  }, [pathname, user?.id]);
+    const handleCountUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.totalUnread !== undefined) {
+        setChatUnread(detail.totalUnread);
+      }
+    };
+    const handleIncrement = () => {
+      setChatUnread((prev) => prev + 1);
+    };
+    window.addEventListener("chat-unread-update", handleCountUpdate);
+    window.addEventListener("chat-unread-increment", handleIncrement);
+    return () => {
+      window.removeEventListener("chat-unread-update", handleCountUpdate);
+      window.removeEventListener("chat-unread-increment", handleIncrement);
+    };
+  }, []);
 
   const getActiveId = () => {
     if (pathname === "/shop/feed") return "home";
@@ -54,7 +95,7 @@ export default function ShopBottomNav() {
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = activeId === item.id;
-          const badgeCount = 0;
+          const badgeCount = item.id === "chat" ? chatUnread : item.id === "deals" ? dealCount : 0;
           return (
             <Link
               key={item.id}

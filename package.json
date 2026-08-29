@@ -8,8 +8,6 @@
     "start": "tsx server.ts",
     "start:next": "next start -p ${PORT:-3000}",
     "lint": "eslint",
-    "db:seed": "tsx src/lib/seed.ts",
-    "db:reset": "tsx src/lib/seed.ts",
     "deploy": "./deploy/deploy.sh"
   },
   "dependencies": {
