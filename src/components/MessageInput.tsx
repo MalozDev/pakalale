@@ -85,6 +85,11 @@ export default function MessageInput({
   // Voice recording
   const startRecording = useCallback(async () => {
     try {
+      // Check for HTTPS (required for microphone access)
+      if (window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
+        alert("Voice recording requires HTTPS. Please use https:// or access via localhost.");
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")

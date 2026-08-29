@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 
+export const maxDuration = 60; // Vercel: allow up to 60s for large uploads
+
 /**
  * POST /api/upload
- * 
- * Upload files to Cloudinary. Accepts multipart/form-data with:
- * - file: the file to upload
- * - folder: optional folder name (default: "pakalale")
- * - type: "image" | "video" | "audio" | "auto" (default: "auto")
+ * Upload files to Cloudinary. Works on Vercel, Render, and standalone.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +16,11 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    // Validate Cloudinary config
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
+      return NextResponse.json({ error: "Cloudinary not configured" }, { status: 500 });
     }
 
     // Validate file size (max 50MB for video, 10MB for images/audio)
@@ -59,6 +62,7 @@ export async function POST(request: NextRequest) {
       folder: subFolder,
       resourceType: detectedType,
       transformation,
+      filename: file.name,
     });
 
     return NextResponse.json({
@@ -69,9 +73,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[Upload API] Error:", error);
-    return NextResponse.json(
-      { error: "Upload failed" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

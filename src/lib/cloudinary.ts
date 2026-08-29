@@ -10,7 +10,7 @@ export default cloudinary;
 
 /**
  * Upload a file buffer to Cloudinary.
- * Supports images, videos, and audio.
+ * Uses upload() instead of upload_stream() for serverless compatibility.
  */
 export async function uploadToCloudinary(
   buffer: Buffer,
@@ -19,35 +19,39 @@ export async function uploadToCloudinary(
     resourceType?: "image" | "video" | "audio" | "auto";
     publicId?: string;
     transformation?: Record<string, unknown>;
+    filename?: string;
   } = {}
 ): Promise<{ url: string; publicId: string; format: string; resourceType: string }> {
-  const { folder = "pakalale", resourceType = "auto", publicId, transformation } = options;
+  const { folder = "pakalale", resourceType = "auto", publicId, transformation, filename } = options;
 
-  return new Promise((resolve, reject) => {
-    const uploadOptions: Record<string, unknown> = {
-      folder,
-      resource_type: resourceType,
-      ...(publicId ? { public_id: publicId } : {}),
-      ...(transformation ? { transformation } : {}),
+  // Convert buffer to base64 data URI for serverless compatibility
+  const base64 = buffer.toString("base64");
+  const dataUri = `data:application/octet-stream;base64,${base64}`;
+
+  const uploadOptions: Record<string, unknown> = {
+    folder,
+    resource_type: resourceType === "auto" ? "auto" : resourceType,
+    ...(publicId ? { public_id: publicId } : {}),
+    ...(transformation ? { transformation } : {}),
+    ...(filename ? { public_id: `${folder}/${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, "_")}` } : {}),
+  };
+
+  try {
+    const result = await cloudinary.uploader.upload(dataUri, uploadOptions);
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      format: result.format,
+      resourceType: result.resource_type,
     };
-
-    cloudinary.uploader
-      .upload_stream(uploadOptions, (error, result) => {
-        if (error) return reject(error);
-        if (!result) return reject(new Error("Upload failed - no result"));
-        resolve({
-          url: result.secure_url,
-          publicId: result.public_id,
-          format: result.format,
-          resourceType: result.resource_type,
-        });
-      })
-      .end(buffer);
-  });
+  } catch (error) {
+    console.error("[Cloudinary] Upload error:", error);
+    throw error;
+  }
 }
 
 /**
- * Generate optimized URL for images (thumbnails, avatars, etc.)
+ * Generate optimized URL for images
  */
 export function getOptimizedUrl(
   publicId: string,
@@ -62,9 +66,7 @@ export function getOptimizedUrl(
   const { width = 800, height = 600, crop = "fill", quality = "auto", format = "auto" } = options;
 
   return cloudinary.url(publicId, {
-    transformation: [
-      { width, height, crop, quality, format },
-    ],
+    transformation: [{ width, height, crop, quality, format }],
     secure: true,
   });
 }

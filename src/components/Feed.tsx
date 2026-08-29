@@ -168,7 +168,7 @@ export default function Feed({ authorId }: FeedProps) {
   };
 
   // ── Media picker (images + videos, uploads to Cloudinary) ──
-  const { upload: uploadMedia, uploading: mediaUploading, progress: uploadProgress } = useUpload({ folder: "pakalale/feed" });
+  const { upload: uploadMedia, uploading: mediaUploading, progress: uploadProgress, error: uploadError } = useUpload({ folder: "pakalale/feed" });
 
   const handleMediaPick = () => {
     const input = document.createElement("input");
@@ -463,7 +463,7 @@ export default function Feed({ authorId }: FeedProps) {
             <Textarea value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} placeholder="What's on your mind?" rows={4} className="resize-none" />
 
             {/* Upload progress bar */}
-            <UploadProgressBar uploading={mediaUploading} progress={uploadProgress} />
+            <UploadProgressBar uploading={mediaUploading} progress={uploadProgress} error={uploadError} />
 
             {/* Selected media preview */}
             {postMedia.length > 0 && (
