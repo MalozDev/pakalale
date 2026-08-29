@@ -10,3 +10,4 @@ deploy/
 logs/
 tmp/
 .DS_Store
+docker-compose*.yml
