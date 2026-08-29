@@ -12,6 +12,7 @@ import { useLocation, useShops, useProducts, useChats, createChat, sendMessage, 
 import { useAuthStore } from "@/store/authStore";
 import { useDealStore } from "@/store/dealStore";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { CldImage } from "next-cloudinary";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import DealModal from "@/components/DealModal";
 import DealSuccessPopup from "@/components/DealSuccessPopup";
@@ -227,8 +228,7 @@ export default function LocationDetailPage() {
                         <CardContent className="p-3">
                           {/* Product image or placeholder */}
                           <div className="h-24 bg-muted rounded-lg flex items-center justify-center mb-2 overflow-hidden relative">
-                            {product.images && product.images.length > 0 ? (
-                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                            {product.images && product.images.length > 0 ? (                               <CldImage src={product.images[0]} alt={product.name} width={400} height={300} className="w-full h-full object-cover" crop="fill" />
                             ) : (
                               <ShoppingBag className="h-6 w-6 text-muted-foreground" />
                             )}

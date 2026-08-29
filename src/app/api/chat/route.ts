@@ -245,6 +245,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Validate participants ──
+    if (!body.participants || body.participants.length < 2) {
+      return NextResponse.json({ error: "At least 2 participants required" }, { status: 400 });
+    }
+
+    // Prevent self-messaging
+    if (body.participants[0] === body.participants[1]) {
+      return NextResponse.json({ error: "Cannot chat with yourself" }, { status: 400 });
+    }
+
+    // Prevent shop-to-shop and customer-to-customer chats
+    const User = (await import("@/models/User")).default;
+    const participantUsers = await User.find({ _id: { $in: body.participants } })
+      .select("role")
+      .lean();
+
+    if (participantUsers.length !== body.participants.length) {
+      return NextResponse.json({ error: "One or more users not found" }, { status: 400 });
+    }
+
+    const roles = participantUsers.map((u) => u.role);
+    const allSameRole = roles.every((r) => r === roles[0]);
+    if (allSameRole && roles[0] !== "admin") {
+      return NextResponse.json({ error: "Cannot create chat between same account types" }, { status: 400 });
+    }
+
+    // Prevent duplicate active chats between same participants
+    const existingChat = await Chat.findOne({
+      participants: { $all: body.participants, $size: 2 },
+      isActive: true,
+    }).lean();
+    if (existingChat) {
+      return NextResponse.json({
+        chat: {
+          id: existingChat._id.toString(),
+          type: existingChat.type,
+          participants: existingChat.participants.map((p) => toStr(p)),
+          dealInfo: existingChat.dealInfo,
+          isActive: existingChat.isActive,
+          createdAt: existingChat.createdAt,
+          updatedAt: existingChat.updatedAt,
+        },
+      });
+    }
+
     const chat = await Chat.create({
       type: body.type || "general",
       participants: body.participants,

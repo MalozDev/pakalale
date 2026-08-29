@@ -13,6 +13,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useUpload } from "@/hooks/useUpload";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import VerifiedBadge from "./VerifiedBadge";
@@ -209,12 +210,23 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     input.type = "file";
     input.accept = "image/*";
     input.multiple = true;
-    input.onchange = (e) => {
-      Array.from((e.target as HTMLInputElement).files || []).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => { setDemandPhotos((prev) => [...prev, ev.target?.result as string]); };
-        reader.readAsDataURL(file);
-      });
+    input.onchange = async (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files || []);
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "pakalale/demand");
+        formData.append("type", "image");
+        try {
+          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            setDemandPhotos((prev) => [...prev, data.url]);
+          }
+        } catch (err) {
+          console.error("Upload failed:", err);
+        }
+      }
     };
     input.click();
   };

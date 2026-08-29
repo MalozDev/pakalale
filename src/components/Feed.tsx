@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useInfiniteFeed, useShops, createFeedPost, createChat, type FeedPostData, type ShopData } from "@/hooks/useApi";
+import { useUpload } from "@/hooks/useUpload";
+import UploadProgressBar from "@/components/UploadProgressBar";
 
 type FilterType = "all" | "promotions" | "nearby";
 
@@ -30,7 +32,7 @@ export default function Feed({ authorId }: FeedProps) {
   const [posting, setPosting] = useState(false);
 
   // Create post extras
-  const [postImages, setPostImages] = useState<string[]>([]);
+  const [postMedia, setPostMedia] = useState<{ url: string; type: "image" | "video" }[]>([]);
   const [postLocation, setPostLocation] = useState("");
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
@@ -165,21 +167,28 @@ export default function Feed({ authorId }: FeedProps) {
     }
   };
 
-  // ── Photo picker ──
-  const handlePhotoPick = () => {
+  // ── Media picker (images + videos, uploads to Cloudinary) ──
+  const { upload: uploadMedia, uploading: mediaUploading, progress: uploadProgress } = useUpload({ folder: "pakalale/feed" });
+
+  const handleMediaPick = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
-    input.onchange = (e) => {
+    input.accept = "image/*,video/*";
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setPostImages((prev) => [...prev, ev.target?.result as string]);
-      };
-      reader.readAsDataURL(file);
+      const isVideo = file.type.startsWith("video/");
+      const result = await uploadMedia(file);
+      if (result?.url) {
+        // Store video URLs with a prefix marker so we can render them differently
+        setPostMedia((prev) => [...prev, { url: result.url, type: isVideo ? "video" : "image" }]);
+      }
     };
     input.click();
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    setPostMedia((prev) => prev.filter((_, i) => i !== index));
   };
 
   // ── Tag shops ──
@@ -200,7 +209,7 @@ export default function Feed({ authorId }: FeedProps) {
         content: fullContent,
         authorId: user.id,
         locationId: postLocation || user.location,
-        images: postImages,
+        images: postMedia.map((m) => m.url),
       });
       if (result?.post) {
         prependPost({
@@ -210,7 +219,7 @@ export default function Feed({ authorId }: FeedProps) {
         });
       }
       setNewPostContent("");
-      setPostImages([]);
+      setPostMedia([]);
       setPostLocation("");
       setTaggedShops([]);
       setShowCreatePost(false);
@@ -224,6 +233,7 @@ export default function Feed({ authorId }: FeedProps) {
   // ── Deal ──
   const handleMakeDeal = async (productName: string, shopOwnerId: string, dealData?: { quantity: number; suggestedPrice: number; message: string; productId?: string }) => {
     if (!user?.id) return;
+    const chatBase = user.role === "shop_owner" ? "/shop/chat" : "/customer/chat";
     try {
       const dealInfo: Record<string, unknown> = { productName, quantity: dealData?.quantity, initialPrice: dealData?.suggestedPrice, status: "pending" };
       if (dealData?.productId) dealInfo.productId = dealData.productId;
@@ -231,21 +241,22 @@ export default function Feed({ authorId }: FeedProps) {
       const chatId = res?.chat?.id;
       if (chatId && dealData) {
         const { sendMessage: sendMsg } = await import("@/hooks/useApi");
-        await sendMsg({ chatId, senderId: user.id, senderName: `${user.firstName} ${user.lastName}`, senderRole: "customer", content: dealData.message, type: "deal_update" });
+        await sendMsg({ chatId, senderId: user.id, senderName: `${user.firstName} ${user.lastName}`, senderRole: user.role as "customer" | "shop_owner", content: dealData.message, type: "deal_update" });
       }
-      router.push(chatId ? `/customer/chat?chatId=${chatId}` : "/customer/chat");
+      router.push(chatId ? `${chatBase}?chatId=${chatId}` : chatBase);
     } catch (e) { console.error("Failed to create deal chat:", e); }
   };
 
   const handleContactShop = async (shopOwnerId: string) => {
     if (!user?.id) return;
+    const chatBase = user.role === "shop_owner" ? "/shop/chat" : "/customer/chat";
     try {
       const chatsRes = await fetch(`/api/chat?userId=${user.id}`);
       const chatsData = await chatsRes.json();
       const existingChat = (chatsData.chats || []).find((c: { participants: { id: string }[] }) => c.participants.some((p: { id: string }) => p.id === shopOwnerId));
-      if (existingChat) { router.push(`/customer/chat?chatId=${existingChat.id}`); return; }
+      if (existingChat) { router.push(`${chatBase}?chatId=${existingChat.id}`); return; }
       const res = await createChat({ type: "general", participants: [user.id, shopOwnerId] });
-      router.push(res?.chat?.id ? `/customer/chat?chatId=${res.chat.id}` : "/customer/chat");
+      router.push(res?.chat?.id ? `${chatBase}?chatId=${res.chat.id}` : chatBase);
     } catch (e) { console.error("Failed to create chat:", e); }
   };
 
@@ -354,8 +365,8 @@ export default function Feed({ authorId }: FeedProps) {
           )}
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={handlePhotoPick}>
-              <Image className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Photo</span>
+            <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={handleMediaPick}>
+              <Image className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Media</span>
             </Button>
             <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => { setLocationPickerMounted(true); setShowLocationPicker(true); }}>
               <MapPin className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Location</span>
@@ -397,7 +408,7 @@ export default function Feed({ authorId }: FeedProps) {
         ) : (
           <>
             {feedPosts.map((post) => (
-              <FeedPost key={post.id} post={post} onLike={handleLike} onComment={handleComment} onShare={handleShare} onMakeDeal={handleMakeDeal} onContactShop={handleContactShop} currentUserId={user?.id} currentUserName={user ? `${user.firstName} ${user.lastName}` : undefined} />
+              <FeedPost key={post.id} post={post} onLike={handleLike} onComment={handleComment} onShare={handleShare} onMakeDeal={handleMakeDeal} onContactShop={handleContactShop} currentUserId={user?.id} currentUserName={user ? `${user.firstName} ${user.lastName}` : undefined} currentUserRole={user?.role as "customer" | "shop_owner" | undefined} />
             ))}
 
             {/* Load more sentinel — IntersectionObserver targets this */}
@@ -451,10 +462,21 @@ export default function Feed({ authorId }: FeedProps) {
             </div>
             <Textarea value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} placeholder="What's on your mind?" rows={4} className="resize-none" />
 
-            {/* Selected images preview */}
-            {postImages.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto">{postImages.map((img, i) => (
-                <div key={i} className="relative shrink-0"><img src={img} className="h-20 w-20 object-cover rounded-lg" alt="" /><button onClick={() => setPostImages((prev) => prev.filter((_, idx) => idx !== i))} className="absolute -top-1 -right-1 bg-black/60 rounded-full p-0.5"><X className="h-3 w-3 text-white" /></button></div>
+            {/* Upload progress bar */}
+            <UploadProgressBar uploading={mediaUploading} progress={uploadProgress} />
+
+            {/* Selected media preview */}
+            {postMedia.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto">{postMedia.map((media, i) => (
+                <div key={i} className="relative shrink-0">
+                  {media.type === "video" ? (
+                    <video src={media.url} className="h-20 w-20 object-cover rounded-lg" muted />
+                  ) : (
+                    <img src={media.url} className="h-20 w-20 object-cover rounded-lg" alt="" />
+                  )}
+                  <button onClick={() => handleRemoveMedia(i)} className="absolute -top-1 -right-1 bg-black/60 rounded-full p-0.5"><X className="h-3 w-3 text-white" /></button>
+                  {media.type === "video" && <div className="absolute bottom-1 left-1 bg-black/60 rounded px-1 text-[8px] text-white">VIDEO</div>}
+                </div>
               ))}</div>
             )}
 
@@ -471,7 +493,10 @@ export default function Feed({ authorId }: FeedProps) {
             )}
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handlePhotoPick}><Image className="h-4 w-4 mr-1" />Photo</Button>
+              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleMediaPick} disabled={mediaUploading}>
+                {mediaUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Image className="h-4 w-4 mr-1" />}
+                {mediaUploading ? `Uploading... ${Math.round(uploadProgress)}%` : "Photo/Video"}
+              </Button>
               <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setLocationPickerMounted(true); setShowLocationPicker(true); }}><MapPin className="h-4 w-4 mr-1" />Location</Button>
               <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setTagPickerMounted(true); setShowTagPicker(true); }}><Tag className="h-4 w-4 mr-1" />Tag</Button>
             </div>

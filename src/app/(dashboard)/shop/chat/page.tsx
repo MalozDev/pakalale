@@ -198,6 +198,28 @@ export default function ShopChatPage() {
     }
   };
 
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handleSendImage = async (file: File) => {
+    if (!activeChat || !user) return;
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "pakalale/chat");
+      formData.append("type", file.type.startsWith("video/") ? "video" : "image");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        handleSendMessage(data.url, "image");
+      }
+    } catch (err) {
+      console.error("Image upload failed:", err);
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
   const handleReply = (message: MessageData) => {
     setReplyTo({
       messageId: message.id,
@@ -427,139 +449,85 @@ export default function ShopChatPage() {
                 })()}
               </div>
 
-              {/* ── Deal action buttons — role-aware ── */}
+              {/* ── Deal action buttons — shop owner only decides ── */}
               {(() => {
                 const dealStatus = activeChat.dealInfo.status;
 
-                // Shop owner: pending deal → Accept / Negotiate / Decline
+                // ── PENDING: Shop owner reviews customer's offer → Accept / Negotiate / Decline ──
                 if (dealStatus === "pending") {
+                  const offerPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
                   return (
                     <div className="mt-2 space-y-2">
+                      {offerPrice && (
+                        <div className="flex items-center gap-1.5">
+                          <Tag className="h-3 w-3 text-primary" />
+                          <span className="text-[10px] text-muted-foreground">Customer&apos;s offer:</span>
+                          <span className="text-[10px] font-bold text-primary">K{offerPrice.toLocaleString()}</span>
+                        </div>
+                      )}
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="h-7 text-[10px] flex-1 bg-emerald-500 text-white hover:bg-emerald-600"
-                          onClick={() =>
-                            handleDealAction("confirmed" as const)
-                          }
-                        >
+                        <Button size="sm" className="h-7 text-[10px] flex-1 bg-emerald-500 text-white hover:bg-emerald-600" onClick={() => handleDealAction("confirmed" as const)}>
                           <CheckCircle2 className="h-3 w-3 mr-1" /> Accept
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[10px] flex-1"
-                          onClick={() =>
-                            handleDealAction("negotiating" as const)
-                          }
-                        >
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] flex-1" onClick={() => handleDealAction("negotiating" as const)}>
                           <Handshake className="h-3 w-3 mr-1" /> Negotiate
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[10px] flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
-                          onClick={() =>
-                            handleDealAction("cancelled" as const)
-                          }
-                        >
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] flex-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleDealAction("cancelled" as const)}>
                           <XCircle className="h-3 w-3 mr-1" /> Decline
                         </Button>
                       </div>
+                      <p className="text-[10px] text-muted-foreground">Accept the price, negotiate with a counter-offer, or decline</p>
                     </div>
                   );
                 }
 
-                // Both: negotiating → counter-offer input with accept/cancel
+                // ── NEGOTIATING: Back-and-forth until shop owner accepts or declines ──
                 if (dealStatus === "negotiating") {
-                  const lastOfferPrice =
-                    activeChat.dealInfo?.counterPrice ||
-                    activeChat.dealInfo?.initialPrice;
-                  const isMyOffer =
-                    activeChat.dealInfo?.lastOfferBy === user?.id;
+                  const lastOfferPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
+                  const isMyOffer = activeChat.dealInfo?.lastOfferBy === user?.id;
                   return (
                     <div className="mt-2 space-y-2">
                       {lastOfferPrice && (
                         <div className="flex items-center gap-1.5">
                           <Tag className="h-3 w-3 text-primary" />
                           <span className="text-[10px] text-muted-foreground">
-                            {isMyOffer ? "Your counter:" : "Their offer:"}
+                            {isMyOffer ? "Your counter:" : "Customer&apos;s counter:"}
                           </span>
-                          <span className="text-[10px] font-bold text-primary">
-                            K{lastOfferPrice.toLocaleString()}
-                          </span>
+                          <span className="text-[10px] font-bold text-primary">K{lastOfferPrice.toLocaleString()}</span>
                         </div>
                       )}
                       <div className="flex gap-1.5">
                         <div className="relative flex-1">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
-                            K
-                          </span>
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">K</span>
                           <input
                             type="number"
                             value={counterPriceInput}
-                            onChange={(e) =>
-                              setCounterPriceInput(e.target.value)
-                            }
-                            placeholder={
-                              lastOfferPrice
-                                ? `Counter (current: K${lastOfferPrice.toLocaleString()})`
-                                : "Your price"
-                            }
+                            onChange={(e) => setCounterPriceInput(e.target.value)}
+                            placeholder={lastOfferPrice ? `Counter (current: K${lastOfferPrice.toLocaleString()})` : "Your price"}
                             className="w-full pl-5 pr-2 py-1.5 bg-muted border border-border rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-primary"
-                            onKeyDown={(e) =>
-                              e.key === "Enter" && handleProposePrice()
-                            }
+                            onKeyDown={(e) => e.key === "Enter" && handleProposePrice()}
                           />
                         </div>
-                        <Button
-                          size="sm"
-                          className="h-7 px-2 bg-primary text-primary-foreground"
-                          onClick={handleProposePrice}
-                          disabled={proposing || !counterPriceInput}
-                        >
-                          {proposing ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Send className="h-3 w-3" />
-                          )}
+                        <Button size="sm" className="h-7 px-2 bg-primary text-primary-foreground" onClick={handleProposePrice} disabled={proposing || !counterPriceInput}>
+                          {proposing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
                         </Button>
                       </div>
                       <div className="flex gap-1.5">
-                        <Button
-                          size="sm"
-                          className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600 flex-1"
-                          onClick={() =>
-                            handleDealAction("confirmed" as const)
-                          }
-                        >
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Accept{" "}
-                          {lastOfferPrice
-                            ? `K${lastOfferPrice.toLocaleString()}`
-                            : ""}
+                        <Button size="sm" className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600 flex-1" onClick={() => handleDealAction("confirmed" as const)}>
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Accept K{lastOfferPrice?.toLocaleString()}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 text-[9px] px-2 text-destructive border-destructive/30 flex-1"
-                          onClick={() =>
-                            handleDealAction("cancelled" as const)
-                          }
-                        >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Cancel Deal
+                        <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 text-destructive border-destructive/30 flex-1" onClick={() => handleDealAction("cancelled" as const)}>
+                          <XCircle className="h-3 w-3 mr-1" /> Decline
                         </Button>
                       </div>
+                      <p className="text-[10px] text-muted-foreground">Accept, counter with a different price, or decline</p>
                     </div>
                   );
                 }
 
-                // Both: confirmed → show agreed price
+                // ── CONFIRMED: Deal agreed, show agreed price ──
                 if (dealStatus === "confirmed") {
-                  const agreedPrice =
-                    activeChat.dealInfo?.counterPrice ||
-                    activeChat.dealInfo?.finalPrice ||
+                  const agreedPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.finalPrice ||
                     activeChat.dealInfo?.initialPrice;
                   return (
                     <div className="mt-2 space-y-2">
@@ -649,9 +617,11 @@ export default function ShopChatPage() {
       <div className="fixed left-0 right-0 bottom-0 z-40 bg-background border-t border-border">
         <MessageInput
           onSendMessage={handleSendMessage}
+          onSendImage={handleSendImage}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           placeholder={`Message ${otherName}...`}
+          uploading={imageUploading}
         />
       </div>
     </>

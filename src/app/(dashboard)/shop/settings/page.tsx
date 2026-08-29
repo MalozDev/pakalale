@@ -26,6 +26,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useShop, updateShop } from "@/hooks/useApi";
+import { useUpload } from "@/hooks/useUpload";
+import UploadProgressBar from "@/components/UploadProgressBar";
 
 const ALL_SPECIALTIES = [
   "Electronics",
@@ -73,7 +75,7 @@ export default function ShopSettingsPage() {
     },
   });
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const { upload: uploadFile, uploading, progress: uploadProgress } = useUpload({ folder: "pakalale/shop" });
   const [locations, setLocations] = useState<
     Array<{ id: string; name: string; slug: string }>
   >([]);
@@ -127,21 +129,11 @@ export default function ShopSettingsPage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        setShopForm((p) => ({ ...p, [type]: data.url }));
-      }
-    } catch (e) {
-      console.error("Upload failed:", e);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    const result = await uploadFile(file);
+    if (result?.url) {
+      setShopForm((p) => ({ ...p, [type]: result.url }));
     }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const toggleSpecialty = (specialty: string) => {
@@ -210,6 +202,11 @@ export default function ShopSettingsPage() {
                       alt="Cover"
                       className="w-full h-full object-cover"
                     />
+                  )}
+                  {uploading && (
+                    <div className="absolute bottom-0 left-0 right-0">
+                      <UploadProgressBar uploading={uploading} progress={uploadProgress} showLabel={false} />
+                    </div>
                   )}
                   <button
                     onClick={() => {

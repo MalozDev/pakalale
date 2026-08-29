@@ -6,8 +6,21 @@ import { ShoppingBag, Star, Package, ChevronLeft, ChevronRight, Minus, Plus, X }
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CldImage } from "next-cloudinary";
 import { cn } from "@/lib/utils";
 import type { ProductData } from "@/hooks/useApi";
+
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 interface ProductDetailModalProps {
   isOpen: boolean;
@@ -70,11 +83,18 @@ export default function ProductDetailModal({
         <div className="relative shrink-0 bg-muted aspect-[4/3] overflow-hidden">
           {hasImages ? (
             <>
-              <img
-                src={images[imageIndex]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+              {isVideoUrl(images[imageIndex]) ? (
+                <video src={images[imageIndex]} className="w-full h-full object-cover" controls preload="metadata" />
+              ) : (
+                <CldImage
+                  src={images[imageIndex]}
+                  alt={product.name}
+                  width={800}
+                  height={600}
+                  className="w-full h-full object-cover"
+                  crop="fill"
+                />
+              )}
               {images.length > 1 && (
                 <>
                   <button

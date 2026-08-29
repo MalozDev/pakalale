@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, Loader2, ImageIcon, Edit } from "lucide-react";
+import { useUpload } from "@/hooks/useUpload";
+import UploadProgressBar from "@/components/UploadProgressBar";
 import { updateProduct, type ProductData } from "@/hooks/useApi";
 
 interface EditProductModalProps {
@@ -40,7 +42,6 @@ export default function EditProductModal({
 }: EditProductModalProps) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -54,6 +55,7 @@ export default function EditProductModal({
   });
 
   const [images, setImages] = useState<string[]>([]);
+  const { upload: uploadFile, uploading, progress: uploadProgress } = useUpload({ folder: "pakalale/products" });
 
   // Populate form when product changes
   useEffect(() => {
@@ -75,27 +77,11 @@ export default function EditProductModal({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setUploading(true);
-    try {
-      for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setImages((prev) => [...prev, data.url]);
-        }
+    for (const file of Array.from(files)) {
+      const result = await uploadFile(file);
+      if (result?.url) {
+        setImages((prev) => [...prev, result.url]);
       }
-    } catch (err) {
-      console.error("Upload failed:", err);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -204,11 +190,12 @@ export default function EditProductModal({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
                 onChange={handleImageUpload}
                 className="hidden"
               />
+              <UploadProgressBar uploading={uploading} progress={uploadProgress} />
             </div>
 
             {/* Product Name */}

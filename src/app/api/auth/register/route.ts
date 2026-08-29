@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Shop from "@/models/Shop";
+import { invalidateCache } from "@/lib/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
         images: [],
         totalReviews: 0,
       });
+      // Invalidate shops cache so new shop appears immediately
+      invalidateCache("shops:");
     }
 
     // Send welcome notification
@@ -79,10 +82,10 @@ export async function POST(request: NextRequest) {
         userId: user._id.toString(),
         type: "system",
         title: "Shop Owner Welcome! 🏪",
-        message: `Welcome ${firstName}! Your shop is being reviewed. You'll be notified once verified. Start adding products right away.`,
-        actionUrl: "/shop",
+        message: `Welcome ${firstName}! Your shop is being reviewed. You'll be notified once verified. Start adding products right away.`,        actionUrl: "/shop",
       });
     }
+
 
     return NextResponse.json(
       {

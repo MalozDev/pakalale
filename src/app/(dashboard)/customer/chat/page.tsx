@@ -309,6 +309,28 @@ export default function ChatPage() {
     }
   };
 
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handleSendImage = async (file: File) => {
+    if (!activeChat || !user) return;
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "pakalale/chat");
+      formData.append("type", file.type.startsWith("video/") ? "video" : "image");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        handleSendMessage(data.url, file.type.startsWith("video/") ? "image" : "image");
+      }
+    } catch (err) {
+      console.error("Image upload failed:", err);
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
   const handleReply = (message: MessageData) => {
     setReplyTo({
       messageId: message.id,
@@ -429,7 +451,8 @@ export default function ChatPage() {
                 ...prev.dealInfo,
                 counterPrice: price,
                 lastOfferBy: user.id,
-                status: prev.dealInfo.status === "pending" ? "negotiating" : prev.dealInfo.status,
+                // Customer editing price while pending stays pending; only shop owner's counter triggers negotiating
+                status: prev.dealInfo.status,
               },
             }
           : prev
@@ -607,36 +630,18 @@ export default function ChatPage() {
 
             {/* ── Deal action buttons — role-aware ── */}
             {(() => {
-              const isShopOwner = activeChat.otherParticipant?.role !== "shop_owner";
               const dealStatus = activeChat.dealInfo.status;
 
-              // Shop owner: pending deal → Accept / Decline / Negotiate
-              if (isShopOwner && dealStatus === "pending") {
-                return (
-                  <div className="flex gap-2 mt-2">
-                    <Button size="sm" className="h-7 text-[10px] flex-1 bg-emerald-500 text-white hover:bg-emerald-600" onClick={() => handleDealAction("confirmed" as const)}>
-                      <CheckCircle2 className="h-3 w-3 mr-1" /> Accept
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] flex-1" onClick={() => handleDealAction("negotiating" as const)}>
-                      <Handshake className="h-3 w-3 mr-1" /> Negotiate
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] flex-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleDealAction("cancelled" as const)}>
-                      <XCircle className="h-3 w-3 mr-1" /> Decline
-                    </Button>
-                  </div>
-                );
-              }
-
-              // Customer: pending deal → can propose their price or wait
-              if (!isShopOwner && dealStatus === "pending") {
-                const lastOfferPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
+              // ── PENDING: Customer can edit their offer price while waiting ──
+              if (dealStatus === "pending") {
+                const currentPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
                 return (
                   <div className="mt-2 space-y-2">
-                    {lastOfferPrice && (
+                    {currentPrice && (
                       <div className="flex items-center gap-1.5">
                         <Tag className="h-3 w-3 text-primary" />
                         <span className="text-[10px] text-muted-foreground">Your offer:</span>
-                        <span className="text-[10px] font-bold text-primary">K{lastOfferPrice.toLocaleString()}</span>
+                        <span className="text-[10px] font-bold text-primary">K{currentPrice.toLocaleString()}</span>
                       </div>
                     )}
                     <div className="flex gap-1.5">
@@ -646,7 +651,7 @@ export default function ChatPage() {
                           type="number"
                           value={counterPriceInput}
                           onChange={(e) => setCounterPriceInput(e.target.value)}
-                          placeholder={lastOfferPrice ? `Counter (current: K${lastOfferPrice.toLocaleString()})` : "Your price"}
+                          placeholder={currentPrice ? `Change price (current: K${currentPrice.toLocaleString()})` : "Your price"}
                           className="w-full pl-5 pr-2 py-1.5 bg-muted border border-border rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-primary"
                           onKeyDown={(e) => e.key === "Enter" && handleProposePrice()}
                         />
@@ -655,12 +660,12 @@ export default function ChatPage() {
                         <Send className="h-3 w-3" />
                       </Button>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Propose your price or wait for the shop owner</p>
+                    <p className="text-[10px] text-muted-foreground">You can change your price while waiting for the shop owner</p>
                   </div>
                 );
               }
 
-              // Both: negotiating → counter-offer input with accept/cancel
+              // ── NEGOTIATING: Shop owner sent a counter-offer. Customer can accept or counter back ──
               if (dealStatus === "negotiating") {
                 const lastOfferPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.initialPrice;
                 const isMyOffer = activeChat.dealInfo?.lastOfferBy === user?.id;
@@ -670,9 +675,16 @@ export default function ChatPage() {
                       <div className="flex items-center gap-1.5">
                         <Tag className="h-3 w-3 text-primary" />
                         <span className="text-[10px] text-muted-foreground">
-                          {isMyOffer ? "Your counter:" : "Their counter:"}
+                          {isMyOffer ? "You offered:" : "Shop owner offered:"}
                         </span>
                         <span className="text-[10px] font-bold text-primary">K{lastOfferPrice.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {!isMyOffer && (
+                      <div className="flex gap-1.5">
+                        <Button size="sm" className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600 flex-1" onClick={() => handleDealAction("confirmed" as const)}>
+                          <CheckCircle2 className="h-3 w-3 mr-1" />Accept K{lastOfferPrice?.toLocaleString()}
+                        </Button>
                       </div>
                     )}
                     <div className="flex gap-1.5">
@@ -691,19 +703,12 @@ export default function ChatPage() {
                         <Send className="h-3 w-3" />
                       </Button>
                     </div>
-                    <div className="flex gap-1.5">
-                      <Button size="sm" className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600 flex-1" onClick={() => handleDealAction("confirmed" as const)}>
-                        <CheckCircle2 className="h-3 w-3 mr-1" />Accept {lastOfferPrice ? `K${lastOfferPrice.toLocaleString()}` : ""}
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-6 text-[9px] px-2 text-destructive border-destructive/30 flex-1" onClick={() => handleDealAction("cancelled" as const)}>
-                        <XCircle className="h-3 w-3 mr-1" />Cancel Deal
-                      </Button>
-                    </div>
+                    <p className="text-[10px] text-muted-foreground">Counter with a different price or accept their offer</p>
                   </div>
                 );
               }
 
-              // Both: confirmed → mark complete or cancel
+              // ── CONFIRMED: Deal agreed, waiting for fulfillment ──
               if (dealStatus === "confirmed") {
                 const agreedPrice = activeChat.dealInfo?.counterPrice || activeChat.dealInfo?.finalPrice || activeChat.dealInfo?.initialPrice;
                 return (
@@ -831,9 +836,11 @@ export default function ChatPage() {
     <div className="fixed left-0 right-0 bottom-14 sm:bottom-0 z-40 bg-background border-t border-border safe-area-bottom">
       <MessageInput
         onSendMessage={handleSendMessage}
+        onSendImage={handleSendImage}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
         placeholder={`Message ${otherName}...`}
+        uploading={imageUploading}
       />
     </div>
     </>

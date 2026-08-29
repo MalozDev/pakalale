@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Shop from "@/models/Shop";
 import Product from "@/models/Product";
-import { getCached, setCache } from "@/lib/cache";
+import { getCached, setCache, invalidateCache } from "@/lib/cache";
 
 function toStr(val: unknown): string {
   if (!val) return "";
@@ -195,6 +195,10 @@ export async function PUT(request: NextRequest) {
     if (!shop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
+
+    // Invalidate shops cache so new data is fetched
+    invalidateCache("shops:");
+    invalidateCache("shop:");
 
     return NextResponse.json({ shop: { ...shop, id: shop._id.toString() } });
   } catch (error) {

@@ -27,6 +27,14 @@ app.prepare().then(() => {
       origin: "*",
       methods: ["GET", "POST"],
     },
+    // Production optimizations
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    transports: ["websocket", "polling"],
+    allowUpgrades: true,
+    perMessageDeflate: false,
+    httpCompression: true,
+    maxHttpBufferSize: 1e8, // 100MB for large file transfers
   });
 
   // Track online users
@@ -78,7 +86,7 @@ app.prepare().then(() => {
       id: string;
     }) => {
       socket.to(data.chatId).emit("new_message", data);
-      console.log(`📨 Message in ${data.chatId} from ${data.senderName}: ${data.content}`);
+      console.log(`📨 Message in ${data.chatId} from ${data.senderName}: ${data.content.substring(0, 50)}`);
     });
 
     socket.on("typing", (data: { chatId: string; userId: string; userName: string }) => {
@@ -111,8 +119,19 @@ app.prepare().then(() => {
     });
   });
 
+  // Graceful shutdown
+  process.on("SIGTERM", () => {
+    console.log("SIGTERM received. Shutting down gracefully...");
+    io.close();
+    httpServer.close(() => {
+      console.log("Server closed");
+      process.exit(0);
+    });
+  });
+
   httpServer.listen(port, hostname, () => {
     console.log(`> Ready on http://${hostname}:${port}`);
     console.log(`> Socket.IO server running on same port`);
+    console.log(`> Environment: ${dev ? "development" : "production"}`);
   });
 });

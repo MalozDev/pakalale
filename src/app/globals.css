@@ -263,7 +263,14 @@ input[type="checkbox"] {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-  touch-action: pan-y;
+  touch-action: manipulation;
+}
+
+/* Prevent long-press copy/search popup globally on non-input elements */
+.no-text-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Keep text selectable in input fields and textareas */

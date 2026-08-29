@@ -85,7 +85,14 @@ export default function MessageBubble({
     // Close any other open menu first
     setActiveMenuGlobal?.(null);
     activeMenuId = message.id;
-    setMenuPos({ x, y });
+    // Position menu BELOW the bubble, not at touch point
+    const bubble = bubbleRef.current;
+    if (bubble) {
+      const rect = bubble.getBoundingClientRect();
+      setMenuPos({ x: Math.min(x, window.innerWidth - 220), y: rect.bottom + 4 });
+    } else {
+      setMenuPos({ x: Math.min(x, window.innerWidth - 220), y: Math.min(y + 20, window.innerHeight - 120) });
+    }
     setShowMenu(true);
     setShowDeleteConfirm(false);
     navigator.vibrate?.(30);
@@ -95,6 +102,8 @@ export default function MessageBubble({
     setShowMenu(false);
     setShowDeleteConfirm(false);
     setMenuPos(null);
+    // Re-enable text selection
+    if (bubbleRef.current) bubbleRef.current.style.userSelect = '';
     if (activeMenuId === message.id) {
       activeMenuId = null;
     }
@@ -108,9 +117,11 @@ export default function MessageBubble({
       isSwipingRef.current = false;
       hasMovedRef.current = false;
 
-      // Long press timer
+      // Long press timer — prevent text selection
       longPressTimerRef.current = setTimeout(() => {
         if (!hasMovedRef.current) {
+          // Disable text selection on the bubble
+          if (bubbleRef.current) bubbleRef.current.style.userSelect = 'none';
           openMenu(touch.clientX, touch.clientY);
         }
       }, 500);
@@ -284,7 +295,7 @@ export default function MessageBubble({
 
           <div
             className={cn(
-              "px-3 py-2 rounded-2xl text-sm message-bubble-text",
+              "px-3 py-2 rounded-2xl text-sm message-bubble-text select-none",
               isOwn
                 ? "bg-primary text-primary-foreground rounded-br-md"
                 : "bg-muted text-foreground rounded-bl-md",
@@ -328,6 +339,14 @@ export default function MessageBubble({
                   </button>
                   <span className="text-[10px] opacity-30 ml-0.5">enter ↵</span>
                 </div>
+              </div>
+            ) : message.type === "image" && (message.content.includes("cloudinary.com") || message.content.startsWith("http")) ? (
+              <div className="max-w-[280px]">
+                {message.content.match(/\.(mp4|webm|mov|avi|mkv)/i) || message.content.includes("/video/upload/") ? (
+                  <video src={message.content} className="rounded-lg max-w-full" controls preload="metadata" />
+                ) : (
+                  <img src={message.content} alt="Shared image" className="rounded-lg max-w-full" loading="lazy" />
+                )}
               </div>
             ) : (
               <p className="whitespace-pre-wrap break-words">{message.content}</p>

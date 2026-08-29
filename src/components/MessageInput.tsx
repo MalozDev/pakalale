@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Image as ImageIcon, Paperclip, Mic, X, Camera, FileText, Square } from "lucide-react";
+import { Send, Image as ImageIcon, Paperclip, Mic, X, Camera, FileText, Square, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ interface MessageInputProps {
   onCancelReply?: () => void;
   placeholder?: string;
   disabled?: boolean;
+  uploading?: boolean;
 }
 
 export default function MessageInput({
@@ -23,6 +24,7 @@ export default function MessageInput({
   onCancelReply,
   placeholder = "Type a message...",
   disabled = false,
+  uploading = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -75,7 +77,7 @@ export default function MessageInput({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type.startsWith("image/")) onSendImage?.(file);
+      if (file.type.startsWith("image/") || file.type.startsWith("video/")) onSendImage?.(file);
       else onSendFile?.(file);
     }
   };
@@ -123,13 +125,23 @@ export default function MessageInput({
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        // Convert to base64 for storage
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result as string;
-          onSendMessage(base64, "voice");
-        };
-        reader.readAsDataURL(audioBlob);
+        // Upload voice note to Cloudinary
+        try {
+          const formData = new FormData();
+          const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: "audio/webm" });
+          formData.append("file", file);
+          formData.append("folder", "pakalale/voice");
+          formData.append("type", "audio");
+          const res = await fetch("/api/upload", { method: "POST", body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            onSendMessage(data.url, "voice");
+          } else {
+            console.error("Voice upload failed");
+          }
+        } catch (err) {
+          console.error("Voice upload error:", err);
+        }
 
         // Cleanup
         stream.getTracks().forEach((track) => track.stop());
@@ -288,13 +300,21 @@ export default function MessageInput({
           )}
         </div>
 
+        {uploading && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 px-3">
+            <div className="flex items-center gap-2 bg-primary/10 text-primary text-[10px] px-2 py-1 rounded-lg">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Uploading media...</span>
+            </div>
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={disabled}
+          disabled={disabled || uploading}
           rows={1}
           className="flex-1 px-3 py-2 bg-muted border border-border rounded-full text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none h-[40px] max-h-[100px]"
         />
@@ -322,7 +342,7 @@ export default function MessageInput({
       </div>
 
       <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.zip,.rar" onChange={handleFileSelect} className="hidden" />
-      <input ref={imageInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+      <input ref={imageInputRef} type="file" accept="image/*,video/*" onChange={handleFileSelect} className="hidden" />
     </div>
   );
 }

@@ -4,6 +4,18 @@ import { useState, useRef, useEffect } from "react";
 import { useModalBack } from "@/hooks/useModalBack";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 interface ImageViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -97,12 +109,22 @@ export default function ImageViewerModal({
           </button>
         )}
 
-        <img
-          src={images[currentIndex]}
-          alt={alt}
-          className="max-h-[85vh] max-w-full object-contain select-none"
-          draggable={false}
-        />
+        {isVideoUrl(images[currentIndex]) ? (
+          <video
+            src={images[currentIndex]}
+            className="max-h-[85vh] max-w-full object-contain select-none"
+            controls
+            autoPlay
+            playsInline
+          />
+        ) : (
+          <img
+            src={images[currentIndex]}
+            alt={alt}
+            className="max-h-[85vh] max-w-full object-contain select-none"
+            draggable={false}
+          />
+        )}
 
         {images.length > 1 && currentIndex < images.length - 1 && (
           <button

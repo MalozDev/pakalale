@@ -12,8 +12,21 @@ import ContactModal from "./ContactModal";
 import DealModal from "./DealModal";
 import ImageViewerModal from "./ImageViewerModal";
 import VerifiedBadge from "./VerifiedBadge";
+import { CldImage } from "next-cloudinary";
 import { cn } from "@/lib/utils";
 import { type FeedPostData } from "@/hooks/useApi";
+
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 interface FeedPostProps {
   post: FeedPostData;
@@ -29,6 +42,7 @@ interface FeedPostProps {
   onContactShop: (shopOwnerId: string) => void;
   currentUserId?: string;
   currentUserName?: string;
+  currentUserRole?: "customer" | "shop_owner";
 }
 
 export default function FeedPost({
@@ -40,6 +54,7 @@ export default function FeedPost({
   onContactShop,
   currentUserId,
   currentUserName,
+  currentUserRole,
 }: FeedPostProps) {
   const router = useRouter();
   const [showComments, setShowComments] = useState(false);
@@ -54,6 +69,9 @@ export default function FeedPost({
   // Lazy-mount flags: only render modals after first open
   const [contactMounted, setContactMounted] = useState(false);
   const [dealMounted, setDealMounted] = useState(false);
+
+  // Determine profile path based on user role
+  const profileBase = currentUserRole === "shop_owner" ? "/shop/profile" : "/customer/profile";
   const [viewerMounted, setViewerMounted] = useState(false);
 
   const isLiked = currentUserId ? (post.likedBy || []).includes(currentUserId) : false;
@@ -99,7 +117,7 @@ export default function FeedPost({
             className="relative shrink-0 cursor-pointer"
             onClick={() => {
               if (post.author?.id) {
-                router.push(`/customer/profile/${post.author.id}`);
+                router.push(`${profileBase}/${post.author.id}`);
               }
             }}
           >
@@ -117,7 +135,7 @@ export default function FeedPost({
                 className="font-semibold text-sm truncate cursor-pointer hover:underline"
                 onClick={() => {
                   if (post.author?.id) {
-                    router.push(`/customer/profile/${post.author.id}`);
+                    router.push(`${profileBase}/${post.author.id}`);
                   }
                 }}
               >
@@ -188,7 +206,11 @@ export default function FeedPost({
                 className="w-full bg-muted rounded-lg overflow-hidden cursor-pointer"
                 onClick={() => { setViewerMounted(true); setViewerIndex(0); setViewerOpen(true); }}
               >
-                <img src={post.images[0]} alt="Post image" className="w-full object-cover max-h-80" />
+                {isVideoUrl(post.images[0]) ? (
+                  <video src={post.images[0]} className="w-full max-h-80 object-cover" controls preload="metadata" />
+                ) : (
+                  <CldImage src={post.images[0]} alt="Post image" width={800} height={600} className="w-full object-cover max-h-80" crop="fill" />
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-0.5 rounded-lg overflow-hidden">
@@ -198,7 +220,11 @@ export default function FeedPost({
                     className="relative bg-muted cursor-pointer aspect-square"
                     onClick={() => { setViewerMounted(true); setViewerIndex(i); setViewerOpen(true); }}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    {isVideoUrl(img) ? (
+                      <video src={img} className="w-full h-full object-cover" muted preload="metadata" />
+                    ) : (
+                      <CldImage src={img} alt="" width={400} height={400} className="w-full h-full object-cover" crop="fill" />
+                    )}
                     {i === 3 && post.images!.length > 4 && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <span className="text-white text-lg font-bold">+{post.images!.length - 4}</span>
@@ -266,16 +292,20 @@ export default function FeedPost({
             <Share className="h-3.5 w-3.5 mr-0.5" />
             Share
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-[10px] sm:text-[11px] text-muted-foreground px-1.5 sm:px-2"
-            onClick={() => { setContactMounted(true); setShowContactModal(true); }}
-          >
-            <Phone className="h-3.5 w-3.5 mr-0.5" />
-            Contact
-          </Button>
-          {post.author?.role === "shop_owner" && (
+          {/* Contact: hidden for self-posts */}
+          {post.author?.id !== currentUserId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-[10px] sm:text-[11px] text-muted-foreground px-1.5 sm:px-2"
+              onClick={() => { setContactMounted(true); setShowContactModal(true); }}
+            >
+              <Phone className="h-3.5 w-3.5 mr-0.5" />
+              Contact
+            </Button>
+          )}
+          {/* Deal: only customer → shop_owner, never self, never shop-to-shop */}
+          {post.author?.role === "shop_owner" && currentUserRole === "customer" && post.author?.id !== currentUserId && (
             <Button
               size="sm"
               className="h-7 text-[10px] sm:text-[11px] bg-primary text-primary-foreground hover:bg-primary/90 px-1.5 sm:px-2"

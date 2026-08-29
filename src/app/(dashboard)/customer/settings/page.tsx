@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useUpload } from "@/hooks/useUpload";
+import UploadProgressBar from "@/components/UploadProgressBar";
 import { useRouter } from "next/navigation";
 import { User, Bell, Shield, LogOut, Camera, Mail, Phone, MapPin, Loader2, Check, Image } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
@@ -18,6 +20,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
+  const { upload: uploadAvatar, uploading: avatarUploading, progress: avatarProgress } = useUpload({ folder: "pakalale/avatars", type: "image" });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileData, setProfileData] = useState({
     firstName: user?.firstName || "",
@@ -34,7 +37,7 @@ export default function SettingsPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -50,13 +53,11 @@ export default function SettingsPage() {
       return;
     }
 
-    // Create preview URL
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setAvatarPreview(result);
-    };
-    reader.readAsDataURL(file);
+    // Upload to Cloudinary
+    const result = await uploadAvatar(file);
+    if (result?.url) {
+      setAvatarPreview(result.url);
+    }
   };
 
   const handleSave = async () => {
@@ -128,9 +129,10 @@ export default function SettingsPage() {
                       <Camera className="h-3 w-3" />
                     </div>
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold">{profileData.firstName} {profileData.lastName}</h3>
                     <p className="text-xs text-muted-foreground">Click photo to change</p>
+                    <UploadProgressBar uploading={avatarUploading} progress={avatarProgress} className="mt-2" />
                   </div>
                   <input
                     ref={fileInputRef}
