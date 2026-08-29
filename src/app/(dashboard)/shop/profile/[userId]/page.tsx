@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import VerifiedBadge from "@/components/VerifiedBadge";
-import { CldImage } from "next-cloudinary";
 import ImageViewerModal from "@/components/ImageViewerModal";
 import { useAuthStore } from "@/store/authStore";
 import { createChat } from "@/hooks/useApi";
@@ -233,14 +232,12 @@ export default function ShopProfilePage() {
                     {post.images && post.images.length > 0 && (
                       <div className="mt-3">
                         {post.images.length === 1 ? (
-                          <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openViewer(post.images!, 0)}>
-                            <CldImage src={post.images[0]} alt="" width={400} height={400} className="w-full h-full object-cover" crop="fill" />
+                          <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openViewer(post.images!, 0)}>                             <img src={post.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
                           </div>
                         ) : (
                           <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
                             {post.images.slice(0, 4).map((img, i) => (
-                              <div key={i} className="relative bg-muted cursor-pointer aspect-square" onClick={() => openViewer(post.images!, i)}>
-                                <CldImage src={img} alt="" width={400} height={400} className="w-full h-full object-cover" crop="fill" />
+                              <div key={i} className="relative bg-muted cursor-pointer aspect-square" onClick={() => openViewer(post.images!, i)}>                                 <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                               </div>
                             ))}
                           </div>

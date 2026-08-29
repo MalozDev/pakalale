@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/store/authStore";
 import { useProducts, updateProduct, deleteProduct, type ProductData } from "@/hooks/useApi";
-import { CldImage } from "next-cloudinary";
 import AddProductModal from "@/components/modals/AddProductModal";
 import EditProductModal from "@/components/modals/EditProductModal";
 
@@ -104,7 +103,7 @@ export default function ProductsPage() {
               <Card key={product.id} className="bg-card border-border hover:border-primary/20 transition-colors">
                 <CardContent className="p-3">
                   {product.images && product.images.length > 0 ? (
-                    <div className="w-full h-32 rounded-lg overflow-hidden bg-muted mb-2">                       <CldImage src={product.images[0]} alt={product.name} width={400} height={300} className="w-full h-full object-cover" crop="fill" />
+                    <div className="w-full h-32 rounded-lg overflow-hidden bg-muted mb-2">                       <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   ) : (
                     <div className="w-full h-20 rounded-lg bg-muted/50 flex items-center justify-center mb-2">

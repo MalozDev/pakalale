@@ -6,7 +6,6 @@ import { ShoppingBag, Star, Package, ChevronLeft, ChevronRight, Minus, Plus, X }
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CldImage } from "next-cloudinary";
 import { cn } from "@/lib/utils";
 import type { ProductData } from "@/hooks/useApi";
 
@@ -86,13 +85,11 @@ export default function ProductDetailModal({
               {isVideoUrl(images[imageIndex]) ? (
                 <video src={images[imageIndex]} className="w-full h-full object-cover" controls preload="metadata" />
               ) : (
-                <CldImage
+                <img
                   src={images[imageIndex]}
                   alt={product.name}
-                  width={800}
-                  height={600}
                   className="w-full h-full object-cover"
-                  crop="fill"
+                  loading="lazy"
                 />
               )}
               {images.length > 1 && (

@@ -12,7 +12,6 @@ import ContactModal from "./ContactModal";
 import DealModal from "./DealModal";
 import ImageViewerModal from "./ImageViewerModal";
 import VerifiedBadge from "./VerifiedBadge";
-import { CldImage } from "next-cloudinary";
 import { cn } from "@/lib/utils";
 import { type FeedPostData } from "@/hooks/useApi";
 
@@ -209,7 +208,7 @@ export default function FeedPost({
                 {isVideoUrl(post.images[0]) ? (
                   <video src={post.images[0]} className="w-full max-h-80 object-cover" controls preload="metadata" />
                 ) : (
-                  <CldImage src={post.images[0]} alt="Post image" width={800} height={600} className="w-full object-cover max-h-80" crop="fill" />
+                  <img src={post.images[0]} alt="Post image" className="w-full object-cover max-h-80" loading="lazy" />
                 )}
               </div>
             ) : (
@@ -223,7 +222,7 @@ export default function FeedPost({
                     {isVideoUrl(img) ? (
                       <video src={img} className="w-full h-full object-cover" muted preload="metadata" />
                     ) : (
-                      <CldImage src={img} alt="" width={400} height={400} className="w-full h-full object-cover" crop="fill" />
+                      <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                     )}
                     {i === 3 && post.images!.length > 4 && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">

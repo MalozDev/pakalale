@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import VerifiedBadge from "@/components/VerifiedBadge";
-import { CldImage } from "next-cloudinary";
 import ImageViewerModal from "@/components/ImageViewerModal";
 import { useAuthStore } from "@/store/authStore";
 import { createChat } from "@/hooks/useApi";
@@ -325,7 +324,7 @@ export default function ProfilePage() {
                           <div
                             className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden cursor-pointer"
                             onClick={() => openViewer(post.images!, 0)}
-                          >                             <CldImage src={post.images[0]} alt="" width={400} height={400} className="w-full h-full object-cover" crop="fill" />
+                          >                             <img src={post.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
                           </div>
                         ) : (
                           <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
