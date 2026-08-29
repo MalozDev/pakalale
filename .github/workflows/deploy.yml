@@ -17,7 +17,7 @@ jobs:
           script: |
             cd /var/www/pakalale
             git pull origin main
-            docker rm -f pakalale
-            docker build -t pakalale .
-            docker run -d --name pakalale -p 80:3000 --env-file .env --restart unless-stopped pakalale
+            sudo docker rm -f pakalale
+            sudo docker build -t pakalale .
+            sudo docker run -d --name pakalale -p 80:3000 --env-file .env --restart unless-stopped pakalale
             echo "✅ Deployed successfully!"
