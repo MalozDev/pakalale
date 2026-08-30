@@ -423,15 +423,17 @@ export default function ChatPage() {
   const handleDealAction = async (status: "pending" | "negotiating" | "confirmed" | "completed" | "cancelled") => {
     if (!activeChat || !user) return;
     try {
-      await updateDealStatus(activeChat.id, status, user.id);
+      const result = await updateDealStatus(activeChat.id, status, user.id);
       setActiveChat((prev) =>
         prev ? { ...prev, dealInfo: prev.dealInfo ? { ...prev.dealInfo, status } : undefined }
           : prev
       );
       refetchMessages();
 
-      // Optimistically update deal count when status becomes terminal
-      if (status === "completed" || status === "cancelled") {
+      // Use exact count from API if available, otherwise decrement
+      if (result && typeof result.totalDeals === "number") {
+        useDealStore.getState().setDealCount(result.totalDeals);
+      } else if (status === "completed" || status === "cancelled") {
         useDealStore.getState().decrementDealCount();
       }
 

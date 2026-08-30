@@ -56,12 +56,12 @@ export default function LoginPage() {
       if (redirectUrl && redirectUrl !== "/login" && redirectUrl !== "/signup") {
         // Block cross-role redirects
         if ((isShopOwner && isCustomerRoute) || (!isShopOwner && isShopRoute)) {
-          router.push(isShopOwner ? "/shop/overview" : "/customer");
+          router.push(isShopOwner ? "/shop/feed" : "/customer");
         } else {
           router.push(redirectUrl);
         }
       } else {
-        router.push(isShopOwner ? "/shop/overview" : "/customer");
+        router.push(isShopOwner ? "/shop/feed" : "/customer");
       }
     } catch {
       setError("Network error. Please try again.");

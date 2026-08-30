@@ -59,7 +59,7 @@ export default function DashboardLayout({
 
   // Role-based route protection
   if (isCustomer && user.role === "shop_owner") {
-    router.replace("/shop/overview");
+    router.replace("/shop/feed");
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

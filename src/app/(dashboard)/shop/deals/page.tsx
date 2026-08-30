@@ -109,10 +109,12 @@ export default function ShopDealsPage() {
     if (!user?.id) return;
     setUpdatingDeal(chatId);
     try {
-      await updateDealStatus(chatId, newStatus, user.id);
+      const result = await updateDealStatus(chatId, newStatus, user.id);
 
-      // Optimistically update deal count when status becomes terminal
-      if (newStatus === "completed" || newStatus === "cancelled") {
+      // Use exact count from API if available, otherwise decrement
+      if (result && typeof result.totalDeals === "number") {
+        useDealStore.getState().setDealCount(result.totalDeals);
+      } else if (newStatus === "completed" || newStatus === "cancelled") {
         useDealStore.getState().decrementDealCount();
       }
 
@@ -344,6 +346,25 @@ export default function ShopDealsPage() {
                             <CheckCircle className="h-3 w-3 mr-1" />
                           )}
                           Complete Deal
+                        </Button>
+                      )}
+
+                      {(status === "pending" || status === "negotiating") && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 text-[10px] flex-1"
+                          onClick={() =>
+                            handleStatusUpdate(deal.id, "cancelled")
+                          }
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <XCircle className="h-3 w-3 mr-1" />
+                          )}
+                          Cancel Deal
                         </Button>
                       )}
                     </div>

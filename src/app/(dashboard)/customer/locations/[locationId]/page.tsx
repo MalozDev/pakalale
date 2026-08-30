@@ -398,8 +398,13 @@ export default function LocationDetailPage() {
                 {/* Shops Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filtered.map((shop) => (
-                    <Card key={shop.id} className="bg-card border-border hover:border-primary/20 transition-colors cursor-pointer"
+                    <Card key={shop.id} className="bg-card border-border hover:border-primary/20 transition-colors cursor-pointer overflow-hidden"
                       onClick={() => selectShop(shop.id)}>
+                      {shop.coverImage && (
+                        <div className="h-20 w-full overflow-hidden">
+                          <img src={shop.coverImage} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      )}
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <Avatar className="h-12 w-12 shrink-0">

@@ -104,22 +104,14 @@ export function useGlobalSocket(userId?: string) {
     });
 
     // ── Real-time deal status changes ──
-    // When a deal is completed or cancelled, decrement the deal count.
-    // When a deal moves from terminal back to active, increment it.
-    const terminalStatuses = ["completed", "cancelled"];
+    // Always refetch accurate count from API to avoid drift.
     socket.on("deal_status_changed", (data: { dealStatus: string; chatId: string }) => {
-      if (terminalStatuses.includes(data.dealStatus)) {
-        decrementDealCount();
-      } else {
-        // A deal became active again (e.g. reopened) — refetch accurate count
-        // from the API rather than blindly incrementing
-        fetch(`/api/chat?userId=${userId}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((d) => {
-            if (d?.totalDeals !== undefined) setDealCount(d.totalDeals);
-          })
-          .catch(() => {});
-      }
+      fetch(`/api/chat?userId=${userId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.totalDeals !== undefined) setDealCount(d.totalDeals);
+        })
+        .catch(() => {});
     });
 
     // ── Broadcast message received ──

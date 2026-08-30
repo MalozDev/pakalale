@@ -120,7 +120,14 @@ export default function CustomerDashboard() {
                   className="bg-card border-border hover:border-primary/30 transition-all cursor-pointer shrink-0 min-w-[160px] max-w-[180px]"
                   onClick={() => router.push(`/customer/locations/${shop.locationId || "soweto"}?shopId=${shop.id}`)}
                 >
-                  <CardContent className="p-3">
+                  <CardContent className="p-0">
+                    {/* Cover Image Banner */}
+                    {shop.coverImage && (
+                      <div className="h-16 w-full overflow-hidden">
+                        <img src={shop.coverImage} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="p-3">
                     <div className="flex items-center gap-2 mb-2">
                       {shop.profileImage ? (
                         <img src={shop.profileImage} alt={shop.name} className="h-9 w-9 rounded-lg object-cover shrink-0" />
@@ -148,6 +155,7 @@ export default function CustomerDashboard() {
                       <Badge variant="secondary" className="text-[9px] h-4 px-1">
                         {shop.specialties?.[0] || ""}
                       </Badge>
+                    </div>
                     </div>
                   </CardContent>
                 </Card>

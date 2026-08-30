@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
         type: "review",
         title: "New review on your shop ⭐",
         message: `${rating}/5 stars${comment ? ': "' + comment.slice(0, 60) + '"' : ""}`,
-        actionUrl: "/shop/overview",
+        actionUrl: "/shop/feed",
       });
     }
 

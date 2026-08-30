@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     const shops = await Shop.find(query)
       .sort(trending ? { updatedAt: -1 } : { [sort]: order })
-      .select("name ownerId locationId status profileImage specialties rating totalReviews totalViews createdAt updatedAt")
+      .select("name ownerId locationId status coverImage profileImage specialties rating totalReviews totalViews createdAt updatedAt")
       .limit(100)
       .lean();
 

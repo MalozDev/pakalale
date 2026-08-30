@@ -439,7 +439,15 @@ export async function PUT(request: NextRequest) {
         readBy: [],
       });
 
-      return NextResponse.json({ success: true, dealInfo: chat.dealInfo });
+      // Compute fresh totalDeals for all participants so they get exact count
+      const freshChats = await Chat.find({ participants: { $in: chatParticipants }, isActive: true })
+        .select("type dealInfo.status")
+        .lean();
+      const freshTotalDeals = freshChats.filter(
+        (c) => c.type === "deal" && c.dealInfo && c.dealInfo.status === "pending"
+      ).length;
+
+      return NextResponse.json({ success: true, dealInfo: chat.dealInfo, totalDeals: freshTotalDeals });
     }
 
     if (action === "proposePrice" && body.chatId && body.price !== undefined) {
