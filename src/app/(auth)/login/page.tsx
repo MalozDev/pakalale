@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const router = useRouter();
   const { login } = useAuthStore();
 
@@ -39,6 +40,7 @@ export default function LoginPage() {
       }
 
       login(result.user);
+      setSuccess("Login successful! Redirecting...");
 
       // Redirect to the page they were trying to visit, or default to their dashboard
       const redirectUrl = typeof window !== "undefined"
@@ -91,6 +93,11 @@ export default function LoginPage() {
               {error && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                   <p className="text-xs text-destructive">{error}</p>
+                </div>
+              )}
+              {success && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <p className="text-xs text-emerald-500 font-medium">✓ {success}</p>
                 </div>
               )}
 

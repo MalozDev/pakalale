@@ -187,6 +187,15 @@ export default function MessageInput({
       }, 1000);
     } catch (err) {
       console.error("Microphone access denied:", err);
+      const isNotAllowed = (err as Error).name === "NotAllowedError";
+      const isNotFound = (err as Error).name === "NotFoundError";
+      if (isNotAllowed) {
+        alert("Microphone access was denied. Please allow microphone access in your browser settings to send voice messages.");
+      } else if (isNotFound) {
+        alert("No microphone found. Please connect a microphone to send voice messages.");
+      } else {
+        alert("Could not access microphone. Please check your browser settings and try again.");
+      }
     }
   }, [onSendMessage]);
 

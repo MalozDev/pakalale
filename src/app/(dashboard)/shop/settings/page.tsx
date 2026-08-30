@@ -16,6 +16,7 @@ import {
   Tag,
   X,
   ImageIcon,
+  Bell,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent } from "@/components/ui/card";
@@ -80,6 +81,14 @@ export default function ShopSettingsPage() {
     Array<{ id: string; name: string; slug: string }>
   >([]);
   const [showSpecialtyPicker, setShowSpecialtyPicker] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  // Check notification permission on mount
+  useEffect(() => {
+    if (typeof Notification !== "undefined") {
+      setNotificationsEnabled(Notification.permission === "granted");
+    }
+  }, []);
 
   // Fetch locations
   useEffect(() => {
@@ -396,6 +405,38 @@ export default function ShopSettingsPage() {
                       className="pl-10"
                     />
                   </div>
+                </div>
+
+                <Separator />
+
+                {/* Notifications */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-primary" />
+                    <div>
+                      <span className="text-sm font-medium">Push Notifications</span>
+                      <p className="text-[10px] text-muted-foreground">Get notified about new deals and messages</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (typeof Notification === "undefined") {
+                        alert("Notifications are not supported in this browser");
+                        return;
+                      }
+                      if (Notification.permission === "granted") {
+                        setNotificationsEnabled(!notificationsEnabled);
+                      } else if (Notification.permission !== "denied") {
+                        const permission = await Notification.requestPermission();
+                        setNotificationsEnabled(permission === "granted");
+                      } else {
+                        alert("Notifications are blocked. Please enable them in your browser settings.");
+                      }
+                    }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${notificationsEnabled ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${notificationsEnabled ? "translate-x-5" : ""}`} />
+                  </button>
                 </div>
 
                 <Separator />

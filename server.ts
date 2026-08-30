@@ -7,11 +7,12 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env", override: true });
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "0.0.0.0";
+const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
 
-console.log(`> Starting server (dev=${dev}, port=${port})`);
+console.log(`> Starting server (dev=${dev}, port=${port}, host=${hostname})`);
 console.log(`> CWD: ${process.cwd()}`);
+console.log(`> NODE_ENV: ${process.env.NODE_ENV}`);
 
 const app = next({ dev, dir: process.cwd() });
 const handle = app.getRequestHandler();

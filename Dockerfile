@@ -1,6 +1,6 @@
 FROM node:20-alpine AS base
 
-# Install dependencies
+# Install dependencies (including devDependencies for tsx)
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -23,14 +23,22 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy standalone build
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Copy full build output (not standalone) so custom server.ts works
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/next.config.ts ./
+
+# Copy source code needed by the custom server
+COPY --from=builder /app/src ./src
 
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Run the custom server with Socket.IO instead of standalone server.js
+CMD ["npx", "tsx", "server.ts"]
