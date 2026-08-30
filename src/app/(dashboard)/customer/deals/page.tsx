@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/store/authStore";
 import { useChats } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: "Pending", color: "text-yellow-500", bg: "bg-yellow-500/10" },
@@ -44,14 +45,6 @@ export default function DealsListPage() {
     negotiating: dealChats.filter((d) => d.dealInfo?.status === "negotiating").length,
     confirmed: dealChats.filter((d) => d.dealInfo?.status === "confirmed").length,
     completed: dealChats.filter((d) => d.dealInfo?.status === "completed").length,
-  };
-
-  const formatTime = (dateStr: string) => {
-    const diff = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
-    if (diff < 1) return "Just now";
-    if (diff < 60) return `${Math.floor(diff)}m ago`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-    return `${Math.floor(diff / 1440)}d ago`;
   };
 
   const formatDate = (dateStr: string) => {
@@ -175,7 +168,7 @@ export default function DealsListPage() {
                       </div>
                       <div className="flex items-center gap-1 shrink-0 ml-2">
                         <Clock className="h-2.5 w-2.5 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground">{formatTime(deal.lastMessageTime)}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatTimeAgo(deal.lastMessageTime)}</span>
                         <ChevronRight className="h-3 w-3 text-muted-foreground" />
                       </div>
                     </div>

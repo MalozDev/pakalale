@@ -253,7 +253,7 @@ export default function Feed({ authorId }: FeedProps) {
     try {
       const chatsRes = await fetch(`/api/chat?userId=${user.id}`);
       const chatsData = await chatsRes.json();
-      const existingChat = (chatsData.chats || []).find((c: { participants: { id: string }[] }) => c.participants.some((p: { id: string }) => p.id === shopOwnerId));
+      const existingChat = (chatsData.chats || []).find((c: { type: string; participants: { id: string }[] }) => c.type === "general" && c.participants.some((p: { id: string }) => p.id === shopOwnerId));
       if (existingChat) { router.push(`${chatBase}?chatId=${existingChat.id}`); return; }
       const res = await createChat({ type: "general", participants: [user.id, shopOwnerId] });
       router.push(res?.chat?.id ? `${chatBase}?chatId=${res.chat.id}` : chatBase);

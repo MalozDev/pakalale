@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         : [],
       lastMessageIds.length > 0
         ? Message.find({ _id: { $in: lastMessageIds } })
-            .select("content senderId timestamp")
+            .select("content senderId type isRead readBy timestamp")
             .lean()
         : [],
       // Unread counts — simple group-by instead of full aggregate with $ne
@@ -117,10 +117,9 @@ export async function GET(request: NextRequest) {
     unreadCounts.forEach((u) => unreadMap.set(toStr(u._id), u.count));
     const totalUnread = unreadCounts.reduce((sum, u) => sum + u.count, 0);
 
-    // Count active deals (type=deal with non-terminal status)
-    const activeDealStatuses = ["pending", "negotiating", "confirmed"];
+    // Count pending deals only
     const totalDeals = chats.filter(
-      (c) => c.type === "deal" && c.dealInfo && activeDealStatuses.includes(c.dealInfo.status)
+      (c) => c.type === "deal" && c.dealInfo && c.dealInfo.status === "pending"
     ).length;
 
     const result = {
@@ -142,6 +141,9 @@ export async function GET(request: NextRequest) {
               id: toStr(msg._id),
               content: msg.content,
               senderId: toStr(msg.senderId),
+              type: msg.type || "text",
+              isRead: msg.isRead,
+              readBy: Array.isArray(msg.readBy) ? msg.readBy.map((r: unknown) => toStr(r)) : [],
               timestamp: msg.timestamp,
             };
           }
@@ -271,10 +273,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Cannot create chat between same account types" }, { status: 400 });
     }
 
-    // Prevent duplicate active chats between same participants
+    // Prevent duplicate active chats between same participants of the same type
     const existingChat = await Chat.findOne({
       participants: { $all: body.participants, $size: 2 },
       isActive: true,
+      type: body.type || "general",
     }).lean();
     if (existingChat) {
       return NextResponse.json({

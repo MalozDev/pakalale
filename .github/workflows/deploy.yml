@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
@@ -17,7 +17,7 @@ jobs:
           script: |
             cd /var/www/pakalale
             git pull origin main
-            sudo docker rm -f pakalale
+            sudo docker rm -f pakalale || true
             sudo docker build -t pakalale .
             sudo docker run -d --name pakalale -p 80:3000 --env-file .env --restart unless-stopped pakalale
             echo "✅ Deployed successfully!"

@@ -13,6 +13,7 @@ import DealModal from "./DealModal";
 import ImageViewerModal from "./ImageViewerModal";
 import VerifiedBadge from "./VerifiedBadge";
 import { cn } from "@/lib/utils";
+import { formatTimeAgo } from "@/lib/formatTime";
 import { type FeedPostData } from "@/hooks/useApi";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
@@ -118,14 +119,7 @@ export default function FeedPost({
     }
   };
 
-  const formatTime = (timestamp: string) => {
-    const now = new Date();
-    const postTime = new Date(timestamp);
-    const diff = Math.floor((now.getTime() - postTime.getTime()) / (1000 * 60 * 60));
-    if (diff < 1) return "Just now";
-    if (diff < 24) return `${diff}h ago`;
-    return `${Math.floor(diff / 24)}d ago`;
-  };
+
 
   return (
     <Card className="bg-card border-border overflow-hidden">
@@ -169,7 +163,7 @@ export default function FeedPost({
             </div>
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
               <Clock className="h-3 w-3 shrink-0" />
-              <span>{formatTime(post.createdAt)}</span>
+              <span>{formatTimeAgo(post.createdAt)}</span>
               {post.locationId && (
                 <>
                   <span className="hidden sm:inline">·</span>
@@ -377,7 +371,7 @@ export default function FeedPost({
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-xs font-medium">{comment.authorName || "User"}</span>
                       <span className="text-[10px] text-muted-foreground">
-                        {comment.createdAt ? formatTime(comment.createdAt) : ""}
+                        {comment.createdAt ? formatTimeAgo(comment.createdAt) : ""}
                       </span>
                     </div>
                     <p className="text-xs leading-relaxed break-words">{comment.content}</p>

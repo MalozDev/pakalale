@@ -6,7 +6,6 @@ import {
   PhoneCall,
   Wifi,
   WifiOff,
-  ArrowLeft,
   ShoppingBag,
   CheckCircle2,
   XCircle,
@@ -21,7 +20,9 @@ import MessageBubble from "@/components/MessageBubble";
 import MessageInput from "@/components/MessageInput";
 import ChatListSimple from "@/components/ChatListSimple";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/authStore";
+import { useDealStore } from "@/store/dealStore";
 import {
   useChats,
   useChatMessages,
@@ -32,6 +33,8 @@ import {
   type MessageData,
 } from "@/hooks/useApi";
 import { useSocket, type SocketMessage } from "@/hooks/useSocket";
+import { useOnlineStore } from "@/store/onlineStore";
+import { formatLastSeen } from "@/lib/formatTime";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -182,6 +185,9 @@ export default function ChatPage() {
   const {
     isConnected,
     sendMessage: sendSocketMessage,
+    emitDealStatusChanged,
+    startTyping,
+    stopTyping,
   } = useSocket({
     userId: user?.id,
     chatId: activeChat?.id || undefined,
@@ -423,6 +429,15 @@ export default function ChatPage() {
           : prev
       );
       refetchMessages();
+
+      // Optimistically update deal count when status becomes terminal
+      if (status === "completed" || status === "cancelled") {
+        useDealStore.getState().decrementDealCount();
+      }
+
+      // Notify other participants via socket
+      const participantIds = activeChat.participants?.map((p) => p.id) || [];
+      emitDealStatusChanged(status, participantIds);
     } catch (e) {
       console.error("Failed to update deal status:", e);
     }
@@ -561,34 +576,53 @@ export default function ChatPage() {
     <div className="h-[100dvh] bg-background flex flex-col">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border shrink-0">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={goToChatList}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="text-center min-w-0">
-            <div className="flex items-center gap-2 justify-center">
-              <h1 className="text-sm font-bold truncate">{otherName}</h1>
-              {isConnected ? (
-                <Wifi className="h-3 w-3 text-emerald-500" />
-              ) : (
-                <WifiOff className="h-3 w-3 text-muted-foreground" />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="relative shrink-0">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={activeChat?.otherParticipant?.avatar} alt={otherName} />
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">{otherName?.charAt(0) || "?"}</AvatarFallback>
+              </Avatar>
+              {activeChat?.otherParticipant?.id && useOnlineStore.getState().onlineUserIds.has(activeChat.otherParticipant.id) && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-background rounded-full" />
               )}
             </div>
-            <p className="text-[10px] text-muted-foreground">
-              {typingUser
-                ? `${typingUser} is typing...`
-                : activeChat?.type === "deal"
-                  ? (activeChat?.dealInfo?.productName || "Deal")
-                  : "Chat"}
-            </p>
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold truncate">{otherName}</h1>
+              <p className="text-[10px] text-muted-foreground">
+                {typingUser
+                  ? <span className="text-emerald-500">typing...</span>
+                  : activeChat?.otherParticipant?.id && useOnlineStore.getState().onlineUserIds.has(activeChat.otherParticipant.id)
+                    ? <span className="text-emerald-500">Online</span>
+                    : activeChat?.type === "deal"
+                      ? (activeChat?.dealInfo?.productName || "Deal")
+                      : "Chat"}
+              </p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+          <a
+            href="#"
+            className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md hover:bg-muted transition-colors"
+            onClick={async (e) => {
+              e.preventDefault();
+              if (!activeChat?.otherParticipant?.id) return;
+              // Fetch user profile to get phone number
+              try {
+                const res = await fetch(`/api/user/profile?userId=${activeChat.otherParticipant.id}`);
+                const data = await res.json();
+                const phone = data.user?.phone;
+                if (phone) {
+                  window.location.href = `tel:${phone}`;
+                } else {
+                  // No phone — go to profile instead
+                  router.push(`/customer/profile/${activeChat.otherParticipant.id}`);
+                }
+              } catch {
+                router.push(`/customer/profile/${activeChat.otherParticipant?.id}`);
+              }
+            }}
+          >
             <PhoneCall className="h-4 w-4" />
-          </Button>
+          </a>
         </div>
       </header>
 
@@ -802,6 +836,8 @@ export default function ChatPage() {
                 allMessages[idx - 1]?.senderId === message.senderId
               }
               isPending={message.id.startsWith("pending-")}
+              avatar={message.senderId !== user?.id ? activeChat?.otherParticipant?.avatar : undefined}
+              isDelivered={message.senderId === user?.id && !message.id.startsWith("pending-") && activeChat?.otherParticipant?.id != null && useOnlineStore.getState().onlineUserIds.has(activeChat.otherParticipant.id)}
             />
           </div>
         ))}
@@ -837,6 +873,8 @@ export default function ChatPage() {
         onCancelReply={() => setReplyTo(null)}
         placeholder={`Message ${otherName}...`}
         uploading={imageUploading}
+        onTyping={() => startTyping(`${user?.firstName} ${user?.lastName}`)}
+        onStopTyping={() => stopTyping()}
       />
     </div>
     </>

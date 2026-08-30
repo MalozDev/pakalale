@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/store/authStore";
 import { useChats } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
 
 export default function SalesPage() {
   const router = useRouter();
@@ -79,15 +80,6 @@ export default function SalesPage() {
       d.dealInfo?.status === "negotiating" ||
       d.dealInfo?.status === "confirmed"
   ).length;
-
-  const formatTime = (dateStr: string) => {
-    const diff =
-      (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
-    if (diff < 1) return "Just now";
-    if (diff < 60) return `${Math.floor(diff)}m ago`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-    return `${Math.floor(diff / 1440)}d ago`;
-  };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-ZM", {
@@ -292,7 +284,7 @@ export default function SalesPage() {
                                 K{price.toLocaleString()}
                               </p>
                               <p className="text-[10px] text-muted-foreground">
-                                {formatTime(sale.lastMessageTime)}
+                                {formatTimeAgo(sale.lastMessageTime)}
                               </p>
                             </div>
                           </div>

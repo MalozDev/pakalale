@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} dark h-full`} suppressHydrationWarning>
+    <html lang="en" translate="no" className={`${inter.variable} dark h-full`} suppressHydrationWarning>
       <body className="min-h-full bg-background text-foreground antialiased">
         <SuppressExtensionErrors />
         <ContextMenuBlocker />

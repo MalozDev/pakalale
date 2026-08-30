@@ -12,9 +12,22 @@ import {
   X,
 } from "lucide-react";
 import VoiceMessage from "./VoiceMessage";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/chat";
+import ImageViewerModal from "@/components/ImageViewerModal";
+
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 // ── Global singleton: only one message menu open at a time ──
 let activeMenuId: string | null = null;
@@ -29,6 +42,8 @@ interface MessageBubbleProps {
   showAvatar?: boolean;
   isConsecutive?: boolean;
   isPending?: boolean;
+  avatar?: string;
+  isDelivered?: boolean;
 }
 
 export default function MessageBubble({
@@ -40,6 +55,8 @@ export default function MessageBubble({
   showAvatar = false,
   isConsecutive = false,
   isPending = false,
+  avatar,
+  isDelivered = false,
 }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -48,6 +65,7 @@ export default function MessageBubble({
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [showSwipeReply, setShowSwipeReply] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -60,6 +78,7 @@ export default function MessageBubble({
 
   const isOwn = message.senderId === currentUserId;
   const isTextMessage = message.type === "text" || message.type === "deal_update";
+  const isMediaMessage = message.type === "image";
 
   const SWIPE_THRESHOLD = 60;
   const SWIPE_MAX = 120;
@@ -247,6 +266,7 @@ export default function MessageBubble({
       >
         {showAvatar && !isOwn && (
           <Avatar className="h-7 w-7 shrink-0 mb-1">
+            {avatar && <AvatarImage src={avatar} alt={message.senderName} />}
             <AvatarFallback className="bg-muted text-[10px]">
               {message.senderName.charAt(0)}
             </AvatarFallback>
@@ -295,11 +315,14 @@ export default function MessageBubble({
 
           <div
             className={cn(
-              "px-3 py-2 rounded-2xl text-sm message-bubble-text select-none",
-              isOwn
+              "rounded-2xl text-sm message-bubble-text select-none",
+              isMediaMessage ? "bg-transparent p-1" : "px-3 py-2",
+              !isMediaMessage && isOwn
                 ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-muted text-foreground rounded-bl-md",
-              isConsecutive && (isOwn ? "rounded-tr-md" : "rounded-tl-md"),
+                : !isMediaMessage && !isOwn
+                ? "bg-muted text-foreground rounded-bl-md"
+                : "",
+              isConsecutive && !isMediaMessage && (isOwn ? "rounded-tr-md" : "rounded-tl-md"),
               isPending && "opacity-70"
             )}
           >
@@ -340,12 +363,24 @@ export default function MessageBubble({
                   <span className="text-[10px] opacity-30 ml-0.5">enter ↵</span>
                 </div>
               </div>
-            ) : message.type === "image" && (message.content.includes("cloudinary.com") || message.content.startsWith("http")) ? (
-              <div className="max-w-[280px]">
-                {message.content.match(/\.(mp4|webm|mov|avi|mkv)/i) || message.content.includes("/video/upload/") ? (
-                  <video src={message.content} className="rounded-lg max-w-full" controls preload="metadata" />
+            ) : isMediaMessage && (message.content.includes("cloudinary.com") || message.content.startsWith("http")) ? (
+              <div 
+                className="max-w-[280px] cursor-pointer" 
+                onClick={() => setViewerOpen(true)}
+              >
+                {isVideoUrl(message.content) ? (
+                  <video 
+                    src={message.content} 
+                    className="rounded-lg max-w-full" 
+                    autoPlay loop muted playsInline preload="metadata" 
+                  />
                 ) : (
-                  <img src={message.content} alt="Shared image" className="rounded-lg max-w-full" loading="lazy" />
+                  <img 
+                    src={message.content} 
+                    alt="Shared media" 
+                    className="rounded-lg max-w-full" 
+                    loading="lazy" 
+                  />
                 )}
               </div>
             ) : (
@@ -355,7 +390,7 @@ export default function MessageBubble({
             <div
               className={cn(
                 "flex items-center justify-end gap-1 mt-0.5",
-                isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
+                isMediaMessage ? "text-muted-foreground mr-1" : isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
               )}
             >
               {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -363,6 +398,8 @@ export default function MessageBubble({
               {isOwn && !isPending && (
                 message.isRead && message.readBy.length > 0 ? (
                   <CheckCheck className="h-3 w-3 text-blue-400" />
+                ) : isDelivered ? (
+                  <CheckCheck className="h-3 w-3" />
                 ) : (
                   <Check className="h-3 w-3" />
                 )
@@ -467,6 +504,15 @@ export default function MessageBubble({
             )}
           </div>
         </div>
+      )}
+
+      {isMediaMessage && (
+        <ImageViewerModal
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          images={[message.content]}
+          alt="Shared media"
+        />
       )}
     </div>
   );

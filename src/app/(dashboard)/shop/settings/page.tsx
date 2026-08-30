@@ -162,6 +162,10 @@ export default function ShopSettingsPage() {
         profileImage: shopForm.profileImage,
         hours: shopForm.hours,
       });
+      // Sync profileImage to auth store so avatar updates everywhere
+      if (shopForm.profileImage && shopForm.profileImage !== user.avatar) {
+        updateUser({ avatar: shopForm.profileImage });
+      }
       refetch();
     } catch (e) {
       console.error("Failed to save:", e);

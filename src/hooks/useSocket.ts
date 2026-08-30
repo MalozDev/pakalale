@@ -149,12 +149,26 @@ export function useSocket({
     socket.emit("stop_typing", { chatId, userId });
   }, [userId, chatId]);
 
+  const emitDealStatusChanged = useCallback(
+    (dealStatus: string, participantIds: string[]) => {
+      const socket = socketRef.current;
+      if (!socket) return;
+      socket.emit("deal_status_changed", {
+        chatId,
+        dealStatus,
+        participantIds,
+      });
+    },
+    [chatId]
+  );
+
   return {
     isConnected,
     onlineUsers,
     sendMessage,
     startTyping,
     stopTyping,
+    emitDealStatusChanged,
     socket: socketRef.current,
   };
 }

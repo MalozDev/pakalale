@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  ArrowLeft,
   PhoneCall,
   ShoppingBag,
   CheckCircle2,
@@ -17,7 +16,9 @@ import MessageBubble from "@/components/MessageBubble";
 import MessageInput from "@/components/MessageInput";
 import ChatListSimple from "@/components/ChatListSimple";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/authStore";
+import { useDealStore } from "@/store/dealStore";
 import {
   useChatMessages,
   sendMessage,
@@ -26,6 +27,9 @@ import {
   type ChatData,
   type MessageData,
 } from "@/hooks/useApi";
+import { useOnlineStore } from "@/store/onlineStore";
+import { formatLastSeen } from "@/lib/formatTime";
+import { useSocket, type SocketMessage } from "@/hooks/useSocket";
 
 const dealStatusConfig: Record<
   string,
@@ -71,12 +75,14 @@ export default function ShopChatPage() {
   const [pendingMessages, setPendingMessages] = useState<MessageData[]>([]);
   const [counterPriceInput, setCounterPriceInput] = useState("");
   const [proposing, setProposing] = useState(false);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const unreadDividerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const hasScrolledOnOpen = useRef(false);
   const isUserScrolledUp = useRef(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     data: messagesData,
@@ -139,6 +145,48 @@ export default function ShopChatPage() {
     }).catch(() => {});
   }, [activeChat?.id, user?.id, allMessages.length]);
 
+  // Clear typing indicator after 3 seconds
+  useEffect(() => {
+    if (typingUser) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => setTypingUser(null), 3000);
+    }
+    return () => { if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current); };
+  }, [typingUser]);
+
+  // Socket: receive messages from OTHER users
+  const handleNewMessage = useCallback(
+    (msg: SocketMessage) => {
+      if (msg.chatId !== activeChat?.id) return;
+      refetchMessages();
+    },
+    [activeChat?.id, refetchMessages]
+  );
+
+  const handleTyping = useCallback(
+    (data: { chatId: string; userId: string; userName: string }) => {
+      if (data.chatId !== activeChat?.id || data.userId === user?.id) return;
+      setTypingUser(data.userName);
+    },
+    [activeChat?.id, user?.id]
+  );
+
+  const handleStopTyping = useCallback(
+    (data: { chatId: string; userId: string }) => {
+      if (data.chatId !== activeChat?.id) return;
+      setTypingUser(null);
+    },
+    [activeChat?.id]
+  );
+
+  const { isConnected, sendMessage: sendSocketMessage, startTyping, stopTyping } = useSocket({
+    userId: user?.id,
+    chatId: activeChat?.id || undefined,
+    onMessage: handleNewMessage,
+    onTyping: handleTyping,
+    onStopTyping: handleStopTyping,
+  });
+
   const handleSendMessage = async (
     content: string,
     type?: "text" | "image" | "file" | "voice"
@@ -180,6 +228,17 @@ export default function ShopChatPage() {
     if (replyTo) {
       payload.replyTo = replyTo;
       setReplyTo(null);
+    }
+
+    if (isConnected) {
+      sendSocketMessage({
+        chatId: activeChat.id,
+        senderId: user.id,
+        senderName,
+        senderRole: "shop_owner",
+        content,
+        type: type || "text",
+      });
     }
 
     try {
@@ -302,6 +361,19 @@ export default function ShopChatPage() {
           : prev
       );
       refetchMessages();
+
+      // Optimistically update deal count when status becomes terminal
+      if (status === "completed" || status === "cancelled") {
+        useDealStore.getState().decrementDealCount();
+      }
+
+      // Notify other participants via socket
+      const participantIds = activeChat.participants?.map((p) => p.id) || [];
+      window.dispatchEvent(
+        new CustomEvent("deal-status-changed", {
+          detail: { chatId: activeChat.id, dealStatus: status, participantIds },
+        })
+      );
     } catch (e) {
       console.error("Failed to update deal status:", e);
     }
@@ -369,31 +441,40 @@ export default function ShopChatPage() {
       <div className="h-[100dvh] bg-background flex flex-col">
         <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border shrink-0">
           <div className="flex items-center justify-between px-4 h-14">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setShowChatList(true);
-                setActiveChat(null);
-                setReplyTo(null);
-                setPendingMessages([]);
-                setCounterPriceInput("");
-              }}
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <div className="text-center min-w-0">
-              <h1 className="text-sm font-bold truncate">{otherName}</h1>
-              <p className="text-[10px] text-muted-foreground">
-                {activeChat?.dealInfo
-                  ? `Deal: ${activeChat.dealInfo.productName}`
-                  : "Customer"}
-              </p>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="relative shrink-0">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={activeChat?.otherParticipant?.avatar} alt={otherName} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">{otherName?.charAt(0) || "?"}</AvatarFallback>
+                </Avatar>
+                {activeChat?.otherParticipant?.id && useOnlineStore.getState().onlineUserIds.has(activeChat.otherParticipant.id) && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-background rounded-full" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-sm font-bold truncate">{otherName}</h1>
+                <p className="text-[10px] text-muted-foreground">
+                  {typingUser
+                    ? <span className="text-emerald-500">typing...</span>
+                    : activeChat?.otherParticipant?.id && useOnlineStore.getState().onlineUserIds.has(activeChat.otherParticipant.id)
+                      ? <span className="text-emerald-500">Online</span>
+                      : activeChat?.dealInfo
+                        ? `Deal: ${activeChat.dealInfo.productName}`
+                        : "Customer"}
+                </p>
+              </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-              <PhoneCall className="h-4 w-4" />
-            </Button>
+            {activeChat?.otherParticipant?.id ? (
+              <a
+                href={`/shop/profile/${activeChat.otherParticipant?.id}`}
+                className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-md hover:bg-muted transition-colors"
+              >
+                <PhoneCall className="h-4 w-4" />
+              </a>
+            ) : (
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled>
+                <PhoneCall className="h-4 w-4" />
+              </Button>)}
           </div>
         </header>
 
@@ -607,9 +688,21 @@ export default function ShopChatPage() {
                   allMessages[idx - 1]?.senderId === message.senderId
                 }
                 isPending={message.id.startsWith("pending-")}
+                avatar={message.senderId !== user?.id ? activeChat?.otherParticipant?.avatar : undefined}
+                isDelivered={message.senderId === user?.id && !message.id.startsWith("pending-") && activeChat?.otherParticipant?.id != null && useOnlineStore.getState().onlineUserIds.has(activeChat.otherParticipant.id)}
               />
             </div>
           ))}
+          {typingUser && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+              <span>{typingUser} is typing...</span>
+            </div>
+          )}
           <div ref={messagesEndRef} className="h-0" />
         </div>
       </div>
@@ -622,6 +715,8 @@ export default function ShopChatPage() {
           onCancelReply={() => setReplyTo(null)}
           placeholder={`Message ${otherName}...`}
           uploading={imageUploading}
+          onTyping={() => startTyping(`${user?.firstName} ${user?.lastName}`)}
+          onStopTyping={() => stopTyping()}
         />
       </div>
     </>

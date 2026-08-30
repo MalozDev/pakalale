@@ -1,0 +1,903 @@
+
+> frontend@0.1.0 lint
+> eslint
+
+
+/home/systemcall/Desktop/pakalale/frontend/.next/build/chunks/[root-of-the-server]__05i36w1._.js
+    2:85   warning  'exports' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+    4:53   error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+    8:91   warning  'exports' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   10:56   error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+   57:9    error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  128:71   warning  '__turbopack_context__' is defined but never used                                                                    @typescript-eslint/no-unused-vars
+  128:94   warning  'module' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+  128:102  warning  'exports' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+  130:1    error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  299:5    error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  301:5    error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  303:5    error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/systemcall/Desktop/pakalale/frontend/.next/build/chunks/[root-of-the-server]__1kki86f._.js
+   2:73  warning  'exports' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   4:47  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+   8:77  warning  'exports' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+  10:49  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  14:75  warning  'exports' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+  16:48  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  43:1   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  45:1   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  52:21  warning  'ipc' is defined but never used                                                                                      @typescript-eslint/no-unused-vars
+  86:33  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+
+/home/systemcall/Desktop/pakalale/frontend/.next/build/chunks/[turbopack]_runtime.js
+   58:5   error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  143:5   error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  251:5   error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  267:5   error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  277:5   error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  339:5   error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  354:24  error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  598:5   error    Do not assign to the variable `module`. See: https://nextjs.org/docs/messages/no-assign-module-variable              @next/next/no-assign-module-variable
+  607:13  warning  Expected an assignment or function call and instead saw an expression                                                @typescript-eslint/no-unused-expressions
+  702:1   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unused-vars')
+  702:69  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  730:12  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  733:1   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unused-vars')
+  741:13  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  787:30  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  816:34  error    A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  848:1   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unused-vars')
+  891:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  909:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/systemcall/Desktop/pakalale/frontend/.next/build/chunks/node_modules_20v-8wl._.js
+     2:111  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+    28:108  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+    95:106  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+   117:106  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+   130:108  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+   568:115  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+   659:110  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+   681:107  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+   711:107  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+   814:104  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  1055:110  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  1066:5    warning  'warnOnce' is assigned a value but never used                                  @typescript-eslint/no-unused-vars
+  1278:36   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+  1611:103  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  1671:112  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  2009:113  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  2016:5    warning  'warnOnce' is assigned a value but never used                                  @typescript-eslint/no-unused-vars
+  2067:13   error    Unexpected aliasing of 'this' to local variable                                @typescript-eslint/no-this-alias
+  2116:103  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  2308:17   error    Unexpected aliasing of 'this' to local variable                                @typescript-eslint/no-this-alias
+  2432:17   error    Unexpected aliasing of 'this' to local variable                                @typescript-eslint/no-this-alias
+  2451:13   error    Unexpected aliasing of 'this' to local variable                                @typescript-eslint/no-this-alias
+  2560:104  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  2582:105  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  3133:106  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  3163:9    warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+  3166:13   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+  3169:40   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+  3302:111  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  3445:108  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  3499:105  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  3535:103  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  3595:103  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  3619:110  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  4015:108  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  4026:106  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  4032:117  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  4093:107  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  4366:108  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  4369:1    warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+  4378:106  warning  'exports' is defined but never used                                            @typescript-eslint/no-unused-vars
+  4875:23   warning  'comparator' is defined but never used                                         @typescript-eslint/no-unused-vars
+  5056:91   warning  'aStr' is defined but never used                                               @typescript-eslint/no-unused-vars
+  5056:97   warning  'aSourceRoot' is defined but never used                                        @typescript-eslint/no-unused-vars
+  5387:98   warning  'aSourceRoot' is defined but never used                                        @typescript-eslint/no-unused-vars
+  5396:9    warning  'cachedSegments' is assigned a value but never used                            @typescript-eslint/no-unused-vars
+  5419:13   warning  'str' is assigned a value but never used                                       @typescript-eslint/no-unused-vars
+  5897:105  warning  'aStr' is defined but never used                                               @typescript-eslint/no-unused-vars
+  5897:111  warning  'aSourceRoot' is defined but never used                                        @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/frontend/.next/build/chunks/pool_entry-[turbopack-node]_transforms_postcss_ts_0tp-k2v._.js
+  1:7  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/systemcall/Desktop/pakalale/scripts/bench-api.ts
+  33:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/systemcall/Desktop/pakalale/src/app/(auth)/signup/page.tsx
+   7:65  warning  'User' is defined but never used  @typescript-eslint/no-unused-vars
+  14:10  warning  'cn' is defined but never used    @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/chat/page.tsx
+   62:9   warning  The 'chats' logical expression could make the dependencies of useEffect Hook (at line 76) change on every render. To fix this, wrap the initialization of 'chats' in its own useMemo() Hook                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+   69:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/chat/page.tsx:69:9
+  67 |       const found = chats.find((c) => c.id === chatIdFromUrl);
+  68 |       if (found) {
+> 69 |         setActiveChat(found);
+     |         ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  70 |         setShowChatList(false);
+  71 |         hasScrolledOnOpen.current = false;
+  72 |         isUserScrolledUp.current = false;                                                                                                                                                                                                                                                                                                                  react-hooks/set-state-in-effect
+   82:9   warning  The 'messages' logical expression could make the dependencies of useMemo Hook (at line 89) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'messages' in its own useMemo() Hook                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-hooks/exhaustive-deps
+   92:38  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [allMessages, user?.id]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/chat/page.tsx:92:38
+   90 |
+   91 |   // Calculate unread divider position
+>  92 |   const unreadDividerIndex = useMemo(() => {
+      |                                      ^^^^^^^
+>  93 |     if (!user?.id || allMessages.length === 0) return -1;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  94 |     const idx = allMessages.findIndex(
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  95 |       (m) => !m.isRead && m.senderId !== user.id
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  96 |     );
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  97 |     return idx;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  98 |   }, [allMessages, user?.id]);
+      | ^^^^ Could not preserve existing manual memoization
+   99 |
+  100 |   const hasUnread = unreadDividerIndex >= 0;
+  101 |  react-hooks/preserve-manual-memoization
+  402:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/chat/page.tsx:402:5
+  400 |   useEffect(() => {
+  401 |     if (!activeChat?.id || !user?.id || activeChat.dealInfo?.status !== "completed") return;
+> 402 |     setHasReviewed(false);
+      |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  403 |     setReviewRating(0);
+  404 |     setReviewComment("");
+  405 |     fetch(`/api/reviews?shopId=${activeChat.otherParticipant?.shopId || activeChat.otherParticipant?.id}`)                                                                                                                                                                                                                                         react-hooks/set-state-in-effect
+  414:6   warning  React Hook useEffect has missing dependencies: 'activeChat.otherParticipant?.id' and 'activeChat.otherParticipant?.shopId'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/exhaustive-deps
+  417:9   warning  'handleDealAction' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  529:41  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/chat/page.tsx:529:41
+  527 |               <div
+  528 |                 className="bg-muted rounded-2xl px-4 py-2.5 space-y-1"
+> 529 |                 style={{ width: `${60 + Math.random() * 30}%` }}
+      |                                         ^^^^^^^^^^^^^ Cannot call impure function
+  530 |               >
+  531 |                 <div className="h-3 w-full bg-background/30 rounded animate-pulse" />
+  532 |                 <div className="h-2 w-12 bg-background/30 rounded animate-pulse" />                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/deals/page.tsx
+   5:18  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   8:10  warning  'Button' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  50:19  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/deals/page.tsx:50:19
+  48 |
+  49 |   const formatTime = (dateStr: string) => {
+> 50 |     const diff = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
+     |                   ^^^^^^^^^^ Cannot call impure function
+  51 |     if (diff < 1) return "Just now";
+  52 |     if (diff < 60) return `${Math.floor(diff)}m ago`;
+  53 |     if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;  react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/locations/[locationId]/page.tsx
+    5:10  warning  'MapPin' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+    5:60  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   11:46  warning  'useChats' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   63:9   warning  The 'allShops' logical expression could make the dependencies of useEffect Hook (at line 77) change on every render. To fix this, wrap the initialization of 'allShops' in its own useMemo() Hook                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/exhaustive-deps
+   75:18  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/locations/[locationId]/page.tsx:75:18
+  73 |     if (initialShopId && !selectedShop && allShops.length > 0) {
+  74 |       const match = allShops.find((s) => s.id === initialShopId);
+> 75 |       if (match) setSelectedShop(initialShopId);
+     |                  ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  76 |     }
+  77 |   }, [initialShopId, allShops, selectedShop]);
+  78 |  react-hooks/set-state-in-effect
+  258:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @next/next/no-img-element
+  268:41  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/locations/page.tsx
+  5:59  warning  'Loader2' is defined but never used  @typescript-eslint/no-unused-vars
+  8:10  warning  'Button' is defined but never used   @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/notifications/page.tsx
+   3:34  warning  'useState' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  10:56  warning  'NotificationData' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  44:9   warning  The 'notifications' logical expression could make the dependencies of useCallback Hook (at line 78) change on every render. To fix this, wrap the initialization of 'notifications' in its own useMemo() Hook                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  63:36  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `data`, but the source dependencies were [notifications, data?.unreadCount, refetch, setUnreadCount]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/notifications/page.tsx:63:36
+  61 |   }, [user?.id, data?.unreadCount, refetch, setUnreadCount]);
+  62 |
+> 63 |   const handleDelete = useCallback(async (notificationId: string) => {
+     |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 64 |     try {
+     | ^^^^^^^^^
+> 65 |       await fetch("/api/notifications", {
+     …
+     | ^^^^^^^^^
+> 77 |     }
+     | ^^^^^^^^^
+> 78 |   }, [notifications, data?.unreadCount, refetch, setUnreadCount]);
+     | ^^^^ Could not preserve existing manual memoization
+  79 |
+  80 |   const dealCount = notifications.filter((n) => n.type === "deal").length;
+  81 |   const messageCount = notifications.filter((n) => n.type === "message").length;  react-hooks/preserve-manual-memoization
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/page.tsx
+   5:43  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  33:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/page.tsx:33:7
+  31 |     const hasSeenWelcome = sessionStorage.getItem("pakalale_welcome_seen");
+  32 |     if (!hasSeenWelcome) {
+> 33 |       setShowWelcome(true);
+     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  34 |       sessionStorage.setItem("pakalale_welcome_seen", "1");
+  35 |       const timer = setTimeout(() => setShowWelcome(false), 3000);
+  36 |       return () => clearTimeout(timer);  react-hooks/set-state-in-effect
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/profile/[userId]/page.tsx
+    6:28  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+    7:43  warning  'ImageIcon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   84:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/profile/[userId]/page.tsx:84:5
+  82 |   useEffect(() => {
+  83 |     if (!userId) return;
+> 84 |     setLoading(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  85 |     Promise.all([
+  86 |       fetch(`/api/user/profile?userId=${userId}`).then((r) => r.json()),
+  87 |       fetch(`/api/shops?ownerId=${userId}`).then((r) => r.json()),  react-hooks/set-state-in-effect
+  122:19  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/profile/[userId]/page.tsx:122:19
+  120 |
+  121 |   const formatTime = (timestamp: string) => {
+> 122 |     const diff = (Date.now() - new Date(timestamp).getTime()) / (1000 * 60 * 60);
+      |                   ^^^^^^^^^^ Cannot call impure function
+  123 |     if (diff < 1) return "Just now";
+  124 |     if (diff < 24) return `${Math.floor(diff)}h ago`;
+  125 |     return `${Math.floor(diff / 24)}d ago`;                                                                                                                                                                                                                                                                                                                                                react-hooks/purity
+  343:31  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @next/next/no-img-element
+  357:35  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/search/page.tsx
+    7:13  warning  'ArrowRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+    7:40  warning  'Package' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  107:36  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [user?.id]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/search/page.tsx:107:36
+  105 |
+  106 |   // Fetch search results
+> 107 |   const fetchResults = useCallback(async (q: string) => {
+      |                                    ^^^^^^^^^^^^^^^^^^^^^^
+> 108 |     if (!q.trim()) {
+      | ^^^^^^^^^^^^^^^^^^^^
+> 109 |       setResults(null);
+      …
+      | ^^^^^^^^^^^^^^^^^^^^
+> 123 |     }
+      | ^^^^^^^^^^^^^^^^^^^^
+> 124 |   }, [user?.id]);
+      | ^^^^ Could not preserve existing manual memoization
+  125 |
+  126 |   // Fetch trending searches
+  127 |   const fetchTrending = useCallback(async () => {                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/preserve-manual-memoization
+  138:36  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [user?.id]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/search/page.tsx:138:36
+  136 |
+  137 |   // Fetch search history
+> 138 |   const fetchHistory = useCallback(async () => {
+      |                                    ^^^^^^^^^^^^^
+> 139 |     if (!user?.id) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 140 |     try {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 141 |       const res = await fetch(`/api/search/history?userId=${user.id}&limit=10`);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 142 |       const data = await res.json();
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 143 |       setSearchHistory(data.history || []);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 144 |     } catch (e) {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 145 |       console.error("Failed to fetch history:", e);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 146 |     }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 147 |   }, [user?.id]);
+      | ^^^^ Could not preserve existing manual memoization
+  148 |
+  149 |   // Initial load
+  150 |   useEffect(() => {  react-hooks/preserve-manual-memoization
+  151:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/search/page.tsx:151:5
+  149 |   // Initial load
+  150 |   useEffect(() => {
+> 151 |     fetchTrending();
+      |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  152 |     fetchHistory();
+  153 |   }, [fetchTrending, fetchHistory]);
+  154 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/set-state-in-effect
+  158:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/search/page.tsx:158:7
+  156 |   useEffect(() => {
+  157 |     if (query) {
+> 158 |       setSearchInput(query);
+      |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  159 |       fetchResults(query);
+  160 |     }
+  161 |   }, [query, fetchResults]);                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-hooks/set-state-in-effect
+  206:9   warning  'getShopId' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  602:24  warning  'p' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/customer/settings/page.tsx
+  118:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  148:21  warning  Image elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                              jsx-a11y/alt-text
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/chat/page.tsx
+  85:9   warning  The 'messages' logical expression could make the dependencies of useMemo Hook (at line 91) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'messages' in its own useMemo() Hook                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  93:38  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [allMessages, user?.id]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/chat/page.tsx:93:38
+   91 |   }, [messages, pendingMessages]);
+   92 |
+>  93 |   const unreadDividerIndex = useMemo(() => {
+      |                                      ^^^^^^^
+>  94 |     if (!user?.id || allMessages.length === 0) return -1;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  95 |     return allMessages.findIndex(
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  96 |       (m) => !m.isRead && m.senderId !== user.id
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  97 |     );
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  98 |   }, [allMessages, user?.id]);
+      | ^^^^ Could not preserve existing manual memoization
+   99 |
+  100 |   const hasUnread = unreadDividerIndex >= 0;
+  101 |  react-hooks/preserve-manual-memoization
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/deals/page.tsx
+   12:3  warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  121:8  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/deals/page.tsx:121:8
+  119 |   const formatTime = (dateStr: string) => {
+  120 |     const diff =
+> 121 |       (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
+      |        ^^^^^^^^^^ Cannot call impure function
+  122 |     if (diff < 1) return "Just now";
+  123 |     if (diff < 60) return `${Math.floor(diff)}m ago`;
+  124 |     if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;  react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/feed/page.tsx
+  17:3  warning  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/history/page.tsx
+   19:10  warning  'Button' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  132:8   error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/history/page.tsx:132:8
+  130 |   const formatTime = (dateStr: string) => {
+  131 |     const diff =
+> 132 |       (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
+      |        ^^^^^^^^^^ Cannot call impure function
+  133 |     if (diff < 1) return "Just now";
+  134 |     if (diff < 60) return `${Math.floor(diff)}m ago`;
+  135 |     if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;  react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/notifications/page.tsx
+  10:3  warning  'MapPin' is defined but never used            @typescript-eslint/no-unused-vars
+  24:8  warning  'NotificationData' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/overview/page.tsx
+   5:28  warning  'TrendingUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  35:19  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/overview/page.tsx:35:19
+  33 |
+  34 |   const formatTime = (dateStr: string) => {
+> 35 |     const diff = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
+     |                   ^^^^^^^^^^ Cannot call impure function
+  36 |     if (diff < 1) return "Just now";
+  37 |     if (diff < 24) return `${Math.floor(diff)}h ago`;
+  38 |     return `${Math.floor(diff / 24)}d ago`;  react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/products/page.tsx
+    5:10   warning  'Plus' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  106:114  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/profile/[userId]/page.tsx
+    6:28  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+    6:37  warning  'ShoppingBag' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+    7:43  warning  'ImageIcon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   84:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/profile/[userId]/page.tsx:84:5
+  82 |   useEffect(() => {
+  83 |     if (!userId) return;
+> 84 |     setLoading(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  85 |     Promise.all([
+  86 |       fetch(`/api/user/profile?userId=${userId}`).then((r) => r.json()),
+  87 |       fetch(`/api/shops?ownerId=${userId}`).then((r) => r.json()),  react-hooks/set-state-in-effect
+  122:19  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/profile/[userId]/page.tsx:122:19
+  120 |
+  121 |   const formatTime = (timestamp: string) => {
+> 122 |     const diff = (Date.now() - new Date(timestamp).getTime()) / (1000 * 60 * 60);
+      |                   ^^^^^^^^^^ Cannot call impure function
+  123 |     if (diff < 1) return "Just now";
+  124 |     if (diff < 24) return `${Math.floor(diff)}h ago`;
+  125 |     return `${Math.floor(diff / 24)}d ago`;                                                                                                                                                                                                                                                                                                                                                react-hooks/purity
+  251:31  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @next/next/no-img-element
+  261:35  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/sales/page.tsx
+  85:8  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/sales/page.tsx:85:8
+  83 |   const formatTime = (dateStr: string) => {
+  84 |     const diff =
+> 85 |       (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
+     |        ^^^^^^^^^^ Cannot call impure function
+  86 |     if (diff < 1) return "Just now";
+  87 |     if (diff < 60) return `${Math.floor(diff)}m ago`;
+  88 |     if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;  react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/settings/page.tsx
+   18:3   warning  'ImageIcon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   54:25  warning  'updateUser' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   99:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/app/(dashboard)/shop/settings/page.tsx:99:7
+   97 |         return "08:00 - 18:00";
+   98 |       };
+>  99 |       setShopForm({
+      |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  100 |         name: s.name || "",
+  101 |         description: s.description || "",
+  102 |         locationId: s.locationId || "",  react-hooks/set-state-in-effect
+  200:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @next/next/no-img-element
+  229:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/app/api/analytics/route.ts
+   6:16  warning  'Message' is defined but never used               @typescript-eslint/no-unused-vars
+  79:11  warning  'activeCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/api/demand/route.ts
+  5:8  warning  'Shop' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/api/feed/v2/route.ts
+  4:20  warning  'Location' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/api/orders/route.ts
+  5:10  warning  'toStr' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/api/products/route.ts
+  6:10  warning  'Location' is defined but never used  @typescript-eslint/no-unused-vars
+  9:10  warning  'toStr' is defined but never used     @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/app/api/shops/route.ts
+  130:9  error  'shopsWithScore' is never reassigned. Use 'const' instead  prefer-const
+
+/home/systemcall/Desktop/pakalale/src/components/ChatListSimple.tsx
+  25:3   warning  'onBack' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  49:19  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/components/ChatListSimple.tsx:49:19
+  47 |   const formatTime = (timestamp: string) => {
+  48 |     const date = new Date(timestamp);
+> 49 |     const diff = (Date.now() - date.getTime()) / (1000 * 60 * 60);
+     |                   ^^^^^^^^^^ Cannot call impure function
+  50 |     if (diff < 1) return "Now";
+  51 |     if (diff < 24) return `${Math.floor(diff)}h`;
+  52 |     if (diff < 48) return "Yesterday";  react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/components/ChatModal.tsx
+  10:10  warning  'Badge' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/ContactModal.tsx
+  5:3  warning  'X' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/DealModal.tsx
+  6:33  warning  'DialogHeader' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/Feed.tsx
+   16:70  warning  'FeedPostData' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  128:34  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [user?.id, toggleLike]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/components/Feed.tsx:128:34
+  126 |
+  127 |   // ── Like ──
+> 128 |   const handleLike = useCallback((postId: string) => {
+      |                                  ^^^^^^^^^^^^^^^^^^^^^
+> 129 |     if (!user?.id) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 130 |     toggleLike(postId, user.id);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 131 |   }, [user?.id, toggleLike]);
+      | ^^^^ Could not preserve existing manual memoization
+  132 |
+  133 |   // ── Comment ──
+  134 |   const handleComment = useCallback((postId: string, authorName: string, content: string) => {                                                                                                                                     react-hooks/preserve-manual-memoization
+  134:37  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [user?.id, addComment]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/components/Feed.tsx:134:37
+  132 |
+  133 |   // ── Comment ──
+> 134 |   const handleComment = useCallback((postId: string, authorName: string, content: string) => {
+      |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 135 |     if (!user?.id) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 136 |     addComment(postId, user.id, authorName, content);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 137 |   }, [user?.id, addComment]);
+      | ^^^^ Could not preserve existing manual memoization
+  138 |
+  139 |   const handleShare = (postId: string) => {
+  140 |     const url = typeof window !== "undefined" ? `${window.location.origin}/post/${postId}` : "";  react-hooks/preserve-manual-memoization
+  369:15  warning  Image elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  jsx-a11y/alt-text
+  475:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @next/next/no-img-element
+  497:87  warning  Image elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  jsx-a11y/alt-text
+
+/home/systemcall/Desktop/pakalale/src/components/FeedPost.tsx
+    5:67  warning  'CheckCircle' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+    5:87  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+    6:16  warning  'CardContent' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   61:10  warning  'imageIndex' is assigned a value but never used                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   61:22  warning  'setImageIndex' is assigned a value but never used                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   78:9   warning  'postRef' is assigned a value but never used                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  231:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  245:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/components/Header.tsx
+  26:54  warning  'onTabChange' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/ImageViewerModal.tsx
+   41:17  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/components/ImageViewerModal.tsx:41:17
+  39 |
+  40 |   useEffect(() => {
+> 41 |     if (isOpen) setCurrentIndex(initialIndex);
+     |                 ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  42 |   }, [isOpen, initialIndex]);
+  43 |
+  44 |   useEffect(() => {  react-hooks/set-state-in-effect
+  121:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/components/MessageBubble.tsx
+  348:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/components/MessageInput.tsx
+  6:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/NotificationsModal.tsx
+  13:56  warning  'NotificationData' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  54:19  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/systemcall/Desktop/pakalale/src/components/NotificationsModal.tsx:54:19
+  52 |
+  53 |   const formatTime = (timestamp: string) => {
+> 54 |     const diff = (Date.now() - new Date(timestamp).getTime()) / (1000 * 60);
+     |                   ^^^^^^^^^^ Cannot call impure function
+  55 |     if (diff < 1) return "Just now";
+  56 |     if (diff < 60) return `${Math.floor(diff)}m ago`;
+  57 |     if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;  react-hooks/purity
+
+/home/systemcall/Desktop/pakalale/src/components/ProductDetailModal.tsx
+   5:65  warning  'Minus' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   5:72  warning  'Plus' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  88:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/components/SearchOverlay.tsx
+    7:47  warning  'AlertCircle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+    8:3   warning  'Image' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   13:10  warning  'Card' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   13:16  warning  'CardContent' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   16:10  warning  'useUpload' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  143:36  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [user?.id]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/components/SearchOverlay.tsx:143:36
+  141 |   }, []);
+  142 |
+> 143 |   const fetchHistory = useCallback(async () => {
+      |                                    ^^^^^^^^^^^^^
+> 144 |     if (!user?.id) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 145 |     try {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 146 |       const res = await fetch(`/api/search/history?userId=${user.id}&limit=3`);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 147 |       const data = await res.json();
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 148 |       setSearchHistory(data.history || []);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 149 |     } catch {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 150 |   }, [user?.id]);
+      | ^^^^ Could not preserve existing manual memoization
+  151 |
+  152 |   useEffect(() => {
+  153 |     if (isOpen) {  react-hooks/preserve-manual-memoization
+  155:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/components/SearchOverlay.tsx:155:7
+  153 |     if (isOpen) {
+  154 |       setTimeout(() => inputRef.current?.focus(), 100);
+> 155 |       fetchTrending();
+      |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  156 |       fetchHistory();
+  157 |     } else {
+  158 |       setQuery("");                                                                                                                                                                                                                                                                react-hooks/set-state-in-effect
+  166:26  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/components/SearchOverlay.tsx:166:26
+  164 |   // Debounced search
+  165 |   useEffect(() => {
+> 166 |     if (!query.trim()) { setResults(null); return; }
+      |                          ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  167 |     const timer = setTimeout(async () => {
+  168 |       setLoading(true);
+  169 |       try {                                                                                                                                                                                                                         react-hooks/set-state-in-effect
+  634:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/components/ShopBottomNav.tsx
+   6:60  warning  'Bell' is defined but never used                  @typescript-eslint/no-unused-vars
+  25:9   warning  'unreadCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/SpecialtyPicker.tsx
+   4:19  warning  'Check' is defined but never used                    @typescript-eslint/no-unused-vars
+   6:10  warning  'cn' is defined but never used                       @typescript-eslint/no-unused-vars
+  62:9   warning  'customSelected' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/WelcomeSection.tsx
+  3:44  warning  'Loader2' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/components/modals/AddProductModal.tsx
+  159:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/components/modals/EditProductModal.tsx
+   63:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/components/modals/EditProductModal.tsx:63:7
+  61 |   useEffect(() => {
+  62 |     if (open && product) {
+> 63 |       setForm({
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  64 |         name: product.name || "",
+  65 |         description: product.description || "",
+  66 |         price: product.price?.toString() || "",  react-hooks/set-state-in-effect
+  160:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @next/next/no-img-element
+
+/home/systemcall/Desktop/pakalale/src/hooks/useApi.ts
+    3:52  warning  'useMemo' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   38:7   warning  'inflightResolvers' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  121:5   error    Error: Expected the dependency list for useCallback to be an array literal
+
+Expected the dependency list for useCallback to be an array literal.
+
+/home/systemcall/Desktop/pakalale/src/hooks/useApi.ts:121:5
+  119 |     },
+  120 |     // eslint-disable-next-line react-hooks/exhaustive-deps
+> 121 |     [url, ...deps]
+      |     ^^^^^^^^^^^^^^ Expected the dependency list for useCallback to be an array literal
+  122 |   );
+  123 |
+  124 |   useEffect(() => {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-hooks/use-memo
+  325:32  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `params`, but the source dependencies were [params?.filter, params?.locationId, params?.authorId, params?.mode]. Inferred less specific property than source.
+
+/home/systemcall/Desktop/pakalale/src/hooks/useApi.ts:325:32
+  323 |
+  324 |   // Build base query params
+> 325 |   const buildUrl = useCallback((cursor?: string | null) => {
+      |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 326 |     const sp = new URLSearchParams();
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 327 |     if (params?.filter && params.filter !== "all") sp.set("filter", params.filter);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 328 |     if (params?.locationId) sp.set("locationId", params.locationId);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 329 |     if (params?.authorId) sp.set("authorId", params.authorId);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 330 |     sp.set("mode", params?.mode || "ranked");
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 331 |     sp.set("limit", "20");
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 332 |     if (cursor) sp.set("cursor", cursor);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 333 |     return `/api/feed?${sp.toString()}`;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 334 |   }, [params?.filter, params?.locationId, params?.authorId, params?.mode]);
+      | ^^^^ Could not preserve existing manual memoization
+  335 |
+  336 |   // Initial load
+  337 |   useEffect(() => {  react-hooks/preserve-manual-memoization
+  339:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/systemcall/Desktop/pakalale/src/hooks/useApi.ts:339:5
+  337 |   useEffect(() => {
+  338 |     let cancelled = false;
+> 339 |     setLoading(true);
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  340 |     setPosts([]);
+  341 |     cursorRef.current = null;
+  342 |     setHasMore(true);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/set-state-in-effect
+
+/home/systemcall/Desktop/pakalale/src/hooks/useCountPolling.ts
+  59:6   warning  React Hook useEffect has a missing dependency: 'fetchCounts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  73:9   warning  'count' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+  74:11  warning  'el' is assigned a value but never used                                                                         @typescript-eslint/no-unused-vars
+
+/home/systemcall/Desktop/pakalale/src/hooks/useSocket.ts
+   75:6   warning  React Hook useEffect has a missing dependency: 'chatId'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/exhaustive-deps
+  158:13  error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/home/systemcall/Desktop/pakalale/src/hooks/useSocket.ts:158:13
+  156 |     startTyping,
+  157 |     stopTyping,
+> 158 |     socket: socketRef.current,
+      |             ^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  159 |   };
+  160 | }
+  161 |  react-hooks/refs
+  158:13  error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/home/systemcall/Desktop/pakalale/src/hooks/useSocket.ts:158:13
+  156 |     startTyping,
+  157 |     stopTyping,
+> 158 |     socket: socketRef.current,
+      |             ^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  159 |   };
+  160 | }
+  161 |  react-hooks/refs
+
+/home/systemcall/Desktop/pakalale/src/lib/mongodb.ts
+  23:3  warning  Unused eslint-disable directive (no problems were reported from 'no-var')
+
+/home/systemcall/Desktop/pakalale/src/lib/seed.ts
+  501:53  warning  '_' is defined but never used  @typescript-eslint/no-unused-vars
+  501:56  warning  'i' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 231 problems (71 errors, 160 warnings)
+  1 error and 9 warnings potentially fixable with the `--fix` option.
+

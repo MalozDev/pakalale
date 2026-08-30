@@ -27,6 +27,8 @@ export default function LandingPage() {
   const [productCount, setProductCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [avgRating, setAvgRating] = useState(0);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/locations").then((r) => r.json()).catch(() => ({ locations: [] })),
@@ -34,17 +36,24 @@ export default function LandingPage() {
       fetch("/api/products").then((r) => r.json()).catch(() => ({ products: [] })),
     ]).then(([locData, shopData, prodData]) => {
       setLocations(locData.locations || []);
-      setShopCount((shopData.shops || []).length);
+      const shops = shopData.shops || [];
+      setShopCount(shops.length);
       setProductCount((prodData.products || []).length);
+      // Compute real average rating from shops
+      const rated = shops.filter((s: { rating?: number }) => s.rating && s.rating > 0);
+      if (rated.length > 0) {
+        const avg = rated.reduce((sum: number, s: { rating: number }) => sum + s.rating, 0) / rated.length;
+        setAvgRating(Math.round(avg * 10) / 10);
+      }
       setLoading(false);
     });
   }, []);
 
   const stats = [
-    { value: shopCount > 0 ? `${shopCount}+` : "6+", label: "Local Shops" },
-    { value: locations.length > 0 ? `${locations.length}` : "5", label: "Trading Areas" },
-    { value: productCount > 0 ? `${productCount}+` : "30+", label: "Products" },
-    { value: "4.8", label: "Avg Rating" },
+    { value: shopCount > 0 ? `${shopCount}+` : "—", label: "Local Shops" },
+    { value: locations.length > 0 ? `${locations.length}` : "—", label: "Trading Areas" },
+    { value: productCount > 0 ? `${productCount}+` : "—", label: "Products" },
+    { value: avgRating > 0 ? `${avgRating}` : "—", label: "Avg Rating" },
   ];
 
   return (

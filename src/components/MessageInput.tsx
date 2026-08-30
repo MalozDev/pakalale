@@ -14,6 +14,8 @@ interface MessageInputProps {
   placeholder?: string;
   disabled?: boolean;
   uploading?: boolean;
+  onTyping?: () => void;
+  onStopTyping?: () => void;
 }
 
 export default function MessageInput({
@@ -25,6 +27,8 @@ export default function MessageInput({
   placeholder = "Type a message...",
   disabled = false,
   uploading = false,
+  onTyping,
+  onStopTyping,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -60,10 +64,28 @@ export default function MessageInput({
     };
   }, []);
 
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleSend = () => {
     if (message.trim() && !disabled) {
       onSendMessage(message.trim());
       setMessage("");
+      onStopTyping?.();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    if (e.target.value.trim()) {
+      onTyping?.();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        onStopTyping?.();
+      }, 2000);
+    } else {
+      onStopTyping?.();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     }
   };
 
@@ -316,7 +338,7 @@ export default function MessageInput({
         <textarea
           ref={textareaRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || uploading}

@@ -6,6 +6,7 @@ import { Eye, ShoppingBag, TrendingUp, Star, User, Store, Loader2, DollarSign } 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAnalytics } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
 
 const statusColors: Record<string, string> = {
   completed: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -30,13 +31,6 @@ export default function OverviewPage() {
         { icon: Star, value: `${stats.shopRating || 0} (${stats.shopReviews || 0})`, label: "Rating & Reviews", color: "text-purple-400", bg: "bg-purple-400/10" },
       ]
     : [];
-
-  const formatTime = (dateStr: string) => {
-    const diff = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
-    if (diff < 1) return "Just now";
-    if (diff < 24) return `${Math.floor(diff)}h ago`;
-    return `${Math.floor(diff / 24)}d ago`;
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -120,7 +114,7 @@ export default function OverviewPage() {
                           <div className="min-w-0">
                             <h4 className="text-sm font-medium truncate">{order.customer}</h4>
                             <p className="text-xs text-muted-foreground truncate">{order.products}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{formatTime(order.createdAt)}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{formatTimeAgo(order.createdAt)}</p>
                           </div>
                           <div className="text-right shrink-0">
                             <p className="text-sm font-medium">K{order.total.toLocaleString()}</p>

@@ -97,6 +97,22 @@ app.prepare().then(() => {
       socket.to(data.chatId).emit("user_stop_typing", data);
     });
 
+    socket.on("deal_status_changed", (data: { chatId: string; dealStatus: string; participantIds: string[] }) => {
+      // Broadcast deal status change to all participants so their deal count updates
+      if (data.participantIds && Array.isArray(data.participantIds)) {
+        for (const pid of data.participantIds) {
+          const targetSid = userSockets.get(pid);
+          if (targetSid) {
+            io.to(targetSid).emit("deal_status_changed", {
+              dealStatus: data.dealStatus,
+              chatId: data.chatId,
+            });
+          }
+        }
+      }
+      console.log(`🤝 Deal status changed in ${data.chatId}: ${data.dealStatus}`);
+    });
+
     socket.on("get_online_users", (chatId: string) => {
       const users = Array.from(onlineUsers.get(chatId) || []);
       socket.emit("online_users", { chatId, users });

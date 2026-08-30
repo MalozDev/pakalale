@@ -2,15 +2,17 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { MapPin, Store, Star, Search, Clock, Users, Phone, Loader2, Package, ShoppingBag, ChevronRight } from "lucide-react";
+import { MapPin, Store, Star, Search, Users, Loader2, Package, ShoppingBag, ChevronRight, Eye, ArrowLeft, Filter, TrendingUp, Sparkles, Tag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useLocation, useShops, useProducts, useChats, createChat, sendMessage, type ProductData } from "@/hooks/useApi";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLocation, useShops, useProducts, useChats, createChat, sendMessage, type ProductData, type LocationData } from "@/hooks/useApi";
 import { useAuthStore } from "@/store/authStore";
 import { useDealStore } from "@/store/dealStore";
+import { useOnlineStore } from "@/store/onlineStore";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import DealModal from "@/components/DealModal";
@@ -24,10 +26,11 @@ function isVideoUrl(url: string): boolean {
     if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
     if (url.includes("/video/upload/")) return true;
     return false;
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
+
+type ProductFilter = "all" | "promo" | "new" | string;
+
 export default function LocationDetailPage() {
   const { locationId } = useParams<{ locationId: string }>();
   const searchParams = useSearchParams();
@@ -42,18 +45,16 @@ export default function LocationDetailPage() {
   const [showDealModal, setShowDealModal] = useState(false);
   const [dealSending, setDealSending] = useState(false);
   const [dealSuccess, setDealSuccess] = useState<{ productName: string; quantity: number; totalPrice: number; chatId: string } | null>(null);
-
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [productFilter, setProductFilter] = useState<ProductFilter>("all");
+  const [productSearch, setProductSearch] = useState("");
 
-  const openViewer = (images: string[], index: number) => {
-    setViewerImages(images);
-    setViewerIndex(index);
-    setViewerOpen(true);
-  };
+  const openViewer = (images: string[], index: number) => { setViewerImages(images); setViewerIndex(index); setViewerOpen(true); };
   const dealCount = useDealStore((s) => s.dealCount);
   const incrementDealCount = useDealStore((s) => s.incrementDealCount);
+  const onlineUserIds = useOnlineStore((s) => s.onlineUserIds);
 
   const { data: locData, loading: locLoading } = useLocation(locationId);
   const { data: shopsData, loading: shopsLoading } = useShops({ locationId: locationId || undefined });
@@ -61,12 +62,6 @@ export default function LocationDetailPage() {
 
   const location = locData?.location;
   const allShops = shopsData?.shops || [];
-  const categories = ["all", ...Array.from(new Set(allShops.map((s) => s.specialties?.[0] || "General")))];
-  const filtered = allShops.filter((s) => {
-    const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCat = selectedCategory === "all" || s.specialties?.includes(selectedCategory);
-    return matchSearch && matchCat;
-  });
 
   // Auto-select shop from URL param once shops are loaded
   useEffect(() => {
@@ -76,7 +71,7 @@ export default function LocationDetailPage() {
     }
   }, [initialShopId, allShops, selectedShop]);
 
-  // Track shop view when a shop is selected
+  // Track shop view
   useEffect(() => {
     if (selectedShop) {
       fetch("/api/track", {
@@ -87,83 +82,81 @@ export default function LocationDetailPage() {
     }
   }, [selectedShop]);
 
-  const shopProducts = productsData?.products || [];
-  // Don't block the whole page — only block when NOT viewing a specific shop
-  const loading = selectedShop ? false : (locLoading || shopsLoading);
+  // All specialties from shops in this location
+  const allSpecialties = Array.from(new Set(allShops.flatMap((s) => s.specialties || [])));
+  const categories = ["all", ...allSpecialties];
 
-  // Find shop name for the selected shop
+  // Filtered shops
+  const filtered = allShops.filter((s) => {
+    const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCat = selectedCategory === "all" || s.specialties?.includes(selectedCategory);
+    return matchSearch && matchCat;
+  });
+
+  const shopProducts = productsData?.products || [];
   const currentShop = allShops.find((s) => s.id === selectedShop);
 
-  const handleProductClick = (product: ProductData) => {
-    setSelectedProduct(product);
-  };
+  // Filter products based on productFilter
+  const filteredProducts = shopProducts.filter((p) => {
+    if (productFilter === "promo") return p.discount && p.discount > 0;
+    if (productFilter === "new") {
+      const age = (Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      return age <= 14; // products added in last 14 days
+    }
+    if (productFilter !== "all" && productFilter !== "promo" && productFilter !== "new") {
+      return p.category === productFilter;
+    }
+    return true;
+  }).filter((p) => {
+    if (!productSearch) return true;
+    return p.name.toLowerCase().includes(productSearch.toLowerCase());
+  }).sort((a, b) => {
+    if (productFilter === "new") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    return 0; // default order (API returns ranked)
+  });
+
+  // Product categories for filter tabs
+  const productCategories = Array.from(new Set(shopProducts.map((p) => p.category).filter(Boolean)));
+
+  const handleProductClick = (product: ProductData) => { setSelectedProduct(product); };
 
   const handleMakeDealFromProduct = (product: ProductData) => {
-    setSelectedProduct(null); // Close product detail
-    setDealProduct(product); // Store for deal modal
-    setShowDealModal(true); // Open deal modal
+    setSelectedProduct(null);
+    setDealProduct(product);
+    setShowDealModal(true);
   };
 
   const handleDealSend = useCallback(async (data: { quantity: number; suggestedPrice: number; message: string }) => {
     if (!dealProduct || !user || !currentShop) return;
     setDealSending(true);
-
     try {
       const ownerId = typeof currentShop.ownerId === "string" ? currentShop.ownerId : (currentShop.ownerId as { id: string }).id;
-      // Always create a new deal chat
       const createRes = await createChat({
         type: "deal",
         participants: [user.id, ownerId],
-        dealInfo: {
-          productName: dealProduct.name,
-          productId: dealProduct.id,
-          quantity: data.quantity,
-          initialPrice: data.suggestedPrice,
-          status: "pending",
-        },
+        dealInfo: { productName: dealProduct.name, productId: dealProduct.id, quantity: data.quantity, initialPrice: data.suggestedPrice, status: "pending" },
       });
       const chatId = createRes.chat.id;
-
       const senderName = `${user.firstName} ${user.lastName}`;
-      await sendMessage({
-        chatId,
-        senderId: user.id,
-        senderName,
-        senderRole: "customer",
-        content: data.message,
-        type: "text",
-      });
-
+      await sendMessage({ chatId, senderId: user.id, senderName, senderRole: "customer", content: data.message, type: "text" });
       setShowDealModal(false);
       incrementDealCount();
-      setDealSuccess({
-        productName: dealProduct.name,
-        quantity: data.quantity,
-        totalPrice: data.quantity * data.suggestedPrice,
-        chatId,
-      });
+      setDealSuccess({ productName: dealProduct.name, quantity: data.quantity, totalPrice: data.quantity * data.suggestedPrice, chatId });
       setDealProduct(null);
-    } catch (e) {
-      console.error("Failed to create deal:", e);
-    } finally {
-      setDealSending(false);
-    }
+    } catch (e) { console.error("Failed to create deal:", e); } finally { setDealSending(false); }
   }, [dealProduct, user, currentShop, incrementDealCount]);
+
+  const loading = selectedShop ? false : (locLoading || shopsLoading);
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <div className="w-16" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => selectedShop ? setSelectedShop(null) : router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <h1 className="text-sm font-bold truncate">{selectedShop ? currentShop?.name || "Shop" : location?.name || "Location"}</h1>
-          <div className="w-16 flex justify-end">
-            {dealCount > 0 && (
-              <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-full">
-                <ShoppingBag className="h-3 w-3 text-primary" />
-                <span className="text-[10px] font-bold text-primary">{dealCount}</span>
-              </div>
-            )}
-          </div>
+          <div className="w-8" />
         </div>
       </header>
 
@@ -172,25 +165,23 @@ export default function LocationDetailPage() {
           <div className="space-y-4">
             <div className="bg-card border border-border rounded-lg p-4 sm:p-5 space-y-3">
               <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-2 w-full" /><Skeleton className="h-2 w-3/4" />
               <div className="flex gap-2"><Skeleton className="h-5 w-16 rounded" /><Skeleton className="h-5 w-16 rounded" /><Skeleton className="h-5 w-16 rounded" /></div>
               <div className="flex gap-4"><Skeleton className="h-2 w-16" /><Skeleton className="h-2 w-16" /><Skeleton className="h-2 w-16" /></div>
             </div>
-            <div className="flex gap-3"><Skeleton className="h-10 flex-1 rounded-md" /><Skeleton className="h-10 w-32 rounded-md" /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="bg-card border border-border rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between"><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-4" /></div>
                   <Skeleton className="h-2 w-full" /><Skeleton className="h-2 w-3/4" />
                   <div className="flex gap-1"><Skeleton className="h-4 w-14 rounded" /><Skeleton className="h-4 w-14 rounded" /></div>
-                  <Skeleton className="h-7 w-full rounded" />
                 </div>
               ))}
             </div>
           </div>
         ) : (
           <>
-            {/* Location Info */}
+            {/* Location Header — no time, no contact */}
             {location && !selectedShop && (
               <Card className="bg-card border-border overflow-hidden">
                 <CardContent className="p-4 sm:p-5">
@@ -202,23 +193,77 @@ export default function LocationDetailPage() {
                     ))}
                   </div>
                   <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1"><Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />{location.rating}</div>
+                    <div className="flex items-center gap-1"><Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />{location.rating || "—"}</div>
                     <div className="flex items-center gap-1"><Store className="h-3 w-3" />{allShops.length} shops</div>
-                    <div className="flex items-center gap-1"><Users className="h-3 w-3" />{location.userCount} users</div>
-                    {location.hours && <div className="flex items-center gap-1"><Clock className="h-3 w-3" />{location.hours}</div>}
-                    {location.contact && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{location.contact}</div>}
+                    <div className="flex items-center gap-1"><Eye className="h-3 w-3" />{(location as LocationData & { totalViews?: number }).totalViews ? `${(location as LocationData & { totalViews?: number }).totalViews} views` : "New"}</div>
+                    <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />{onlineUserIds.size} active</div>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Shop Products (Virtual Browse) */}
+            {/* Shop Products with Filters */}
             {selectedShop && (
               <div className="space-y-3">
+                {/* Shop header */}
+                {currentShop && (
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={currentShop.profileImage} alt={currentShop.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                        {currentShop.name?.charAt(0) || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-semibold text-sm truncate">{currentShop.name}</h3>
+                        {currentShop.status === "verified" && <VerifiedBadge size="sm" />}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        {currentShop.rating ? <span className="flex items-center gap-0.5"><Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />{currentShop.rating}</span> : null}
+                        <span>{currentShop.productCount || 0} products</span>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-7 text-[10px] shrink-0" onClick={() => {
+                      const profilePath = `/customer/profile/${typeof currentShop.ownerId === "string" ? currentShop.ownerId : (currentShop.ownerId as { id: string }).id}`;
+                      router.push(profilePath);
+                    }}>View Profile</Button>
+                  </div>
+                )}
+
+                {/* Product filters */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                  {[
+                    { key: "all", label: "All", icon: Package },
+                    { key: "promo", label: "Promo", icon: Tag },
+                    { key: "new", label: "New", icon: Sparkles },
+                    ...productCategories.map((c) => ({ key: c, label: c, icon: TrendingUp })),
+                  ].map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setProductFilter(key as ProductFilter)}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors shrink-0 ${
+                        productFilter === key
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-3 w-3" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Product search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="pl-10 h-9 text-sm" />
+                </div>
+
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold flex items-center gap-1.5">
                     <Package className="h-4 w-4 text-primary" />
-                    Products ({productsLoading ? '...' : shopProducts.length})
+                    Products ({productsLoading ? "..." : filteredProducts.length})
                   </h3>
                 </div>
 
@@ -228,26 +273,21 @@ export default function LocationDetailPage() {
                       <div key={i} className="bg-card border border-border rounded-lg p-3 space-y-2">
                         <Skeleton className="h-24 w-full rounded-lg" />
                         <Skeleton className="h-3 w-3/4" />
-                        <Skeleton className="h-2 w-full" />
                         <div className="flex justify-between"><Skeleton className="h-3 w-16" /><Skeleton className="h-2 w-12" /></div>
                       </div>
                     ))}
                   </div>
-                ) : shopProducts.length === 0 ? (
+                ) : filteredProducts.length === 0 ? (
                   <div className="text-center py-8">
                     <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
-                    <p className="text-xs text-muted-foreground">No products listed yet</p>
+                    <p className="text-xs text-muted-foreground">No products found</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {shopProducts.map((product) => (
-                      <Card
-                        key={product.id}
-                        className="bg-card border-border hover:border-primary/30 transition-all duration-200 cursor-pointer active:scale-[0.98]"
-                        onClick={() => handleProductClick(product)}
-                      >
+                    {filteredProducts.map((product) => (
+                      <Card key={product.id} className="bg-card border-border hover:border-primary/30 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                        onClick={() => handleProductClick(product)}>
                         <CardContent className="p-3">
-                          {/* Product image or placeholder */}
                           <div className="mb-2 relative">
                             {product.images && product.images.length > 0 ? (
                               product.images.length === 1 ? (
@@ -283,9 +323,7 @@ export default function LocationDetailPage() {
                             )}
                             {product.discount && product.discount > 0 && (
                               <div className="absolute top-1 right-1 z-10 pointer-events-none">
-                                <Badge className="bg-rose-500 text-white text-[9px] px-1 h-4 border-0">
-                                  -{product.discount}%
-                                </Badge>
+                                <Badge className="bg-rose-500 text-white text-[9px] px-1 h-4 border-0">-{product.discount}%</Badge>
                               </div>
                             )}
                           </div>
@@ -312,7 +350,7 @@ export default function LocationDetailPage() {
               </div>
             )}
 
-            {/* Search + Category Filter */}
+            {/* Search + Category Filter for shops */}
             {!selectedShop && (
               <>
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -334,18 +372,31 @@ export default function LocationDetailPage() {
                 {/* Shops Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filtered.map((shop) => (
-                    <Card
-                      key={shop.id}
-                      className="bg-card border-border hover:border-primary/20 transition-colors cursor-pointer"
-                      onClick={() => setSelectedShop(shop.id)}
-                    >
+                    <Card key={shop.id} className="bg-card border-border hover:border-primary/20 transition-colors cursor-pointer"
+                      onClick={() => setSelectedShop(shop.id)}>
                       <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="font-semibold text-sm">{shop.name}</h3>
-                            {shop.status === "verified" && <VerifiedBadge size="sm" />}
+                        <div className="flex items-center gap-3 mb-3">
+                          <Avatar className="h-12 w-12 shrink-0">
+                            <AvatarImage src={shop.profileImage} alt={shop.name} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                              {shop.name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h3 className="font-semibold text-sm truncate">{shop.name}</h3>
+                              {shop.status === "verified" && <VerifiedBadge size="sm" />}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                              {shop.rating ? (
+                                <span className="flex items-center gap-0.5">
+                                  <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
+                                  {shop.rating} ({shop.totalReviews})
+                                </span>
+                              ) : <span>No ratings</span>}
+                              {shop.totalViews ? <span>{shop.totalViews} views</span> : null}
+                            </div>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{shop.description}</p>
                         <div className="flex flex-wrap gap-1 mb-3">
@@ -353,19 +404,8 @@ export default function LocationDetailPage() {
                             <Badge key={s} variant="outline" className="text-[10px]">{s}</Badge>
                           ))}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                            {shop.rating || "—"} ({shop.totalReviews})
-                          </div>
-                          <span>{shop.productCount || 0} products</span>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-7 text-[11px]"
-                          onClick={(e) => { e.stopPropagation(); setSelectedShop(shop.id); }}
-                        >
+                        <Button size="sm" variant="outline" className="w-full h-7 text-[11px]"
+                          onClick={(e) => { e.stopPropagation(); setSelectedShop(shop.id); }}>
                           <Package className="h-3 w-3 mr-1" />Browse Products
                         </Button>
                       </CardContent>
@@ -385,52 +425,15 @@ export default function LocationDetailPage() {
         )}
       </div>
 
-      {/* Product Detail Modal */}
+      {/* Modals */}
       {selectedProduct && (
-        <ProductDetailModal
-          isOpen={!!selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          product={selectedProduct}
-          shopName={currentShop?.name}
-          onMakeDeal={handleMakeDealFromProduct}
-        />
+        <ProductDetailModal isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} product={selectedProduct} shopName={currentShop?.name} onMakeDeal={handleMakeDealFromProduct} />
       )}
-
-      {/* Deal Modal */}
-      <DealModal
-        isOpen={showDealModal}
-        onClose={() => { setShowDealModal(false); setDealProduct(null); }}
-        productName={dealProduct?.name || ""}
-        productPrice={dealProduct?.price}
-        shopName={currentShop?.name}
-        onSendDeal={handleDealSend}
-        sending={dealSending}
-      />
-
-      {/* Deal Success Popup */}
-      <DealSuccessPopup
-        isOpen={!!dealSuccess}
-        onClose={() => setDealSuccess(null)}
-        productName={dealSuccess?.productName || ""}
-        quantity={dealSuccess?.quantity || 0}
-        totalPrice={dealSuccess?.totalPrice || 0}
-        onGoToChat={() => {
-          if (dealSuccess?.chatId) {
-            router.push(`/customer/chat?chatId=${dealSuccess.chatId}`);
-          }
-          setDealSuccess(null);
-        }}
-        onContinueBrowsing={() => setDealSuccess(null)}
-      />
-
-      {/* Image Viewer */}
-      <ImageViewerModal
-        isOpen={viewerOpen}
-        onClose={() => setViewerOpen(false)}
-        images={viewerImages}
-        initialIndex={viewerIndex}
-        alt="Product image"
-      />
+      <DealModal isOpen={showDealModal} onClose={() => { setShowDealModal(false); setDealProduct(null); }} productName={dealProduct?.name || ""} productPrice={dealProduct?.price} shopName={currentShop?.name} onSendDeal={handleDealSend} sending={dealSending} />
+      <DealSuccessPopup isOpen={!!dealSuccess} onClose={() => setDealSuccess(null)} productName={dealSuccess?.productName || ""} quantity={dealSuccess?.quantity || 0} totalPrice={dealSuccess?.totalPrice || 0}
+        onGoToChat={() => { if (dealSuccess?.chatId) router.push(`/customer/chat?chatId=${dealSuccess.chatId}`); setDealSuccess(null); }}
+        onContinueBrowsing={() => setDealSuccess(null)} />
+      <ImageViewerModal isOpen={viewerOpen} onClose={() => setViewerOpen(false)} images={viewerImages} initialIndex={viewerIndex} alt="Product image" />
     </div>
   );
 }

@@ -14,6 +14,7 @@ export interface IUser extends Document {
   bio?: string;
   locationCoordinates?: { lat: number; lng: number };
   interestedCategories?: string[];
+  lastActiveAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +36,7 @@ const UserSchema = new Schema<IUser>(
       lng: { type: Number },
     },
     interestedCategories: [{ type: String }],
+    lastActiveAt: { type: Date },
   },
   { timestamps: true }
 );

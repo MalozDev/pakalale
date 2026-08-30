@@ -15,6 +15,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import ImageViewerModal from "@/components/ImageViewerModal";
 import { useAuthStore } from "@/store/authStore";
 import { createChat } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
 function isVideoUrl(url: string): boolean {
@@ -116,13 +117,6 @@ export default function ProfilePage() {
     setViewerImages(images);
     setViewerIndex(index);
     setViewerOpen(true);
-  };
-
-  const formatTime = (timestamp: string) => {
-    const diff = (Date.now() - new Date(timestamp).getTime()) / (1000 * 60 * 60);
-    if (diff < 1) return "Just now";
-    if (diff < 24) return `${Math.floor(diff)}h ago`;
-    return `${Math.floor(diff / 24)}d ago`;
   };
 
   // Skeleton while loading
@@ -377,7 +371,7 @@ export default function ProfilePage() {
                       )}
                       {post.commentsCount > 0 && <span>{post.commentsCount} comments</span>}
                       {post.shares > 0 && <span>{post.shares} shares</span>}
-                      <span className="ml-auto">{formatTime(post.createdAt)}</span>
+                      <span className="ml-auto">{formatTimeAgo(post.createdAt)}</span>
                     </div>
                   </div>
                 </Card>

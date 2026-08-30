@@ -540,7 +540,7 @@ export interface ChatData {
   type: "deal" | "general";
   participants: Array<{ id: string; name: string; avatar?: string; role: string }>;
   otherParticipant?: { id: string; name: string; avatar?: string; role: string; shopId?: string } | null;
-  lastMessage?: { id: string; content: string; senderId: string; timestamp: string } | null;
+  lastMessage?: { id: string; content: string; senderId: string; type?: string; isRead?: boolean; readBy?: string[]; timestamp: string } | null;
   lastMessageTime: string;
   unreadCount?: number;
   dealInfo?: {
@@ -632,8 +632,7 @@ export function useLocations(params?: { search?: string; specialty?: string }) {
 }
 
 export function useLocation(slugOrId: string | null) {
-  const param = slugOrId?.includes("-") ? "slug" : "id";
-  return useFetch<{ location: LocationData }>(slugOrId ? `/api/locations?${param}=${slugOrId}` : null, [slugOrId]);
+  return useFetch<{ location: LocationData }>(slugOrId ? `/api/locations?slug=${slugOrId}` : null, [slugOrId]);
 }
 
 export interface LocationData {
@@ -648,6 +647,7 @@ export interface LocationData {
   specialties: string[];
   hours: string;
   contact: string;
+  totalViews?: number;
   coordinates?: { lat: number; lng: number };
 }
 

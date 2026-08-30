@@ -11,12 +11,35 @@ import { useAuthStore } from "@/store/authStore";
 import { useProducts, updateProduct, deleteProduct, type ProductData } from "@/hooks/useApi";
 import AddProductModal from "@/components/modals/AddProductModal";
 import EditProductModal from "@/components/modals/EditProductModal";
+import ImageViewerModal from "@/components/ImageViewerModal";
+
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 export default function ProductsPage() {
   const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [adjustingStock, setAdjustingStock] = useState<string | null>(null);
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  const openViewer = (images: string[], index: number) => {
+    setViewerImages(images);
+    setViewerIndex(index);
+    setViewerOpen(true);
+  };
 
   const { data, loading, refetch } = useProducts({
     shopId: user?.id || undefined,
@@ -102,14 +125,41 @@ export default function ProductsPage() {
             {products.map((product) => (
               <Card key={product.id} className="bg-card border-border hover:border-primary/20 transition-colors">
                 <CardContent className="p-3">
-                  {product.images && product.images.length > 0 ? (
-                    <div className="w-full h-32 rounded-lg overflow-hidden bg-muted mb-2">                       <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                    </div>
-                  ) : (
-                    <div className="w-full h-20 rounded-lg bg-muted/50 flex items-center justify-center mb-2">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-                    </div>
-                  )}
+                  {/* Product image or placeholder */}
+                  <div className="mb-2 relative">
+                    {product.images && product.images.length > 0 ? (
+                      product.images.length === 1 ? (
+                        <div className="h-32 w-full bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={(e) => { e.stopPropagation(); openViewer(product.images!, 0); }}>
+                          {isVideoUrl(product.images[0]) ? (
+                            <video src={product.images[0]} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                          ) : (
+                            <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="h-32 grid grid-cols-2 gap-0.5 rounded-lg overflow-hidden">
+                          {product.images.slice(0, 2).map((img, i) => (
+                            <div key={i} className="relative bg-muted cursor-pointer aspect-square h-full" onClick={(e) => { e.stopPropagation(); openViewer(product.images!, i); }}>
+                              {isVideoUrl(img) ? (
+                                <video src={img} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                              ) : (
+                                <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                              )}
+                              {i === 1 && product.images!.length > 2 && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                  <span className="text-white text-lg font-bold">+{product.images!.length - 2}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    ) : (
+                      <div className="w-full h-32 rounded-lg bg-muted/50 flex items-center justify-center mb-2">
+                        <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                      </div>
+                    )}
+                  </div>
                   <div className="flex items-start justify-between mb-2">
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-sm truncate">{product.name}</h3>
@@ -155,6 +205,14 @@ export default function ProductsPage() {
           </div>
         )}
       </main>
+
+      <ImageViewerModal
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        alt="Product image"
+      />
     </div>
   );
 }

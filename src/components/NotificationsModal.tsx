@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatTimeAgo } from "@/lib/formatTime";
 import { useNotifications, markNotificationsRead, type NotificationData } from "@/hooks/useApi";
 
 interface NotificationsModalProps {
@@ -50,13 +51,7 @@ export default function NotificationsModal({ isOpen, onClose, userId }: Notifica
     refetch();
   };
 
-  const formatTime = (timestamp: string) => {
-    const diff = (Date.now() - new Date(timestamp).getTime()) / (1000 * 60);
-    if (diff < 1) return "Just now";
-    if (diff < 60) return `${Math.floor(diff)}m ago`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-    return `${Math.floor(diff / 1440)}d ago`;
-  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -97,7 +92,7 @@ export default function NotificationsModal({ isOpen, onClose, userId }: Notifica
                       <div className="flex items-center justify-between gap-2">
                         <h4 className="text-sm font-medium truncate">{notification.title}</h4>
                         <span className="text-xs text-muted-foreground shrink-0">
-                          {formatTime(notification.createdAt)}
+                          {formatTimeAgo(notification.createdAt)}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">

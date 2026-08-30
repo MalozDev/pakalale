@@ -23,6 +23,7 @@ import {
   markNotificationsRead,
   type NotificationData,
 } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
 
 const iconMap: Record<string, React.ElementType> = {
   deal: MessageSquare,
@@ -40,15 +41,6 @@ const colorMap: Record<string, string> = {
   review: "text-rose-400 bg-rose-400/10",
   order: "text-blue-400 bg-blue-400/10",
   system: "text-muted-foreground bg-muted",
-};
-
-const formatTime = (timestamp: string) => {
-  const diff =
-    (Date.now() - new Date(timestamp).getTime()) / (1000 * 60);
-  if (diff < 1) return "Just now";
-  if (diff < 60) return `${Math.floor(diff)}m ago`;
-  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-  return `${Math.floor(diff / 1440)}d ago`;
 };
 
 export default function ShopNotificationsPage() {
@@ -205,7 +197,7 @@ export default function ShopNotificationsPage() {
                             {n.title}
                           </h4>
                           <span className="text-[10px] text-muted-foreground shrink-0">
-                            {formatTime(n.createdAt)}
+                            {formatTimeAgo(n.createdAt)}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">

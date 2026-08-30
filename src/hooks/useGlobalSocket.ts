@@ -17,6 +17,8 @@ export function useGlobalSocket(userId?: string) {
   const socketRef = useRef<Socket | null>(null);
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
   const incrementDealCount = useDealStore((s) => s.incrementDealCount);
+  const decrementDealCount = useDealStore((s) => s.decrementDealCount);
+  const setDealCount = useDealStore((s) => s.setDealCount);
   const setOnlineUsers = useOnlineStore((s) => s.setOnlineUsers);
   const addOnlineUser = useOnlineStore((s) => s.addUser);
   const removeOnlineUser = useOnlineStore((s) => s.removeUser);
@@ -87,6 +89,25 @@ export function useGlobalSocket(userId?: string) {
       }
     });
 
+    // ── Real-time deal status changes ──
+    // When a deal is completed or cancelled, decrement the deal count.
+    // When a deal moves from terminal back to active, increment it.
+    const terminalStatuses = ["completed", "cancelled"];
+    socket.on("deal_status_changed", (data: { dealStatus: string; chatId: string }) => {
+      if (terminalStatuses.includes(data.dealStatus)) {
+        decrementDealCount();
+      } else {
+        // A deal became active again (e.g. reopened) — refetch accurate count
+        // from the API rather than blindly incrementing
+        fetch(`/api/chat?userId=${userId}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => {
+            if (d?.totalDeals !== undefined) setDealCount(d.totalDeals);
+          })
+          .catch(() => {});
+      }
+    });
+
     // ── Broadcast message received ──
     // The server broadcasts "new_message" to all users in the chat room.
     // If the user is NOT in that chat, they need their unread count bumped.
@@ -97,9 +118,41 @@ export function useGlobalSocket(userId?: string) {
       }
     });
 
+    // ── Forward deal-status-changed custom events to the socket server ──
+    // Shop pages that don't have useSocket dispatch a CustomEvent; we relay it.
+    const handleDealStatusChanged = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.chatId && detail?.dealStatus && detail?.participantIds) {
+        socket.emit("deal_status_changed", {
+          chatId: detail.chatId,
+          dealStatus: detail.dealStatus,
+          participantIds: detail.participantIds,
+        });
+      }
+    };
+    window.addEventListener("deal-status-changed", handleDealStatusChanged);
+
+    // ── Heartbeat: update lastActiveAt every 60s ──
+    const heartbeatInterval = setInterval(() => {
+      fetch("/api/user/heartbeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      }).catch(() => {});
+    }, 60_000);
+
+    // Also send heartbeat immediately on connect
+    fetch("/api/user/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    }).catch(() => {});
+
     return () => {
+      clearInterval(heartbeatInterval);
+      window.removeEventListener("deal-status-changed", handleDealStatusChanged);
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [userId, setUnreadCount, incrementDealCount, setOnlineUsers, addOnlineUser, removeOnlineUser]);
+  }, [userId, setUnreadCount, incrementDealCount, decrementDealCount, setDealCount, setOnlineUsers, addOnlineUser, removeOnlineUser]);
 }

@@ -250,6 +250,22 @@ input[type="checkbox"] {
   animation: fireGlow 1.5s ease-in-out infinite;
 }
 
+/* ── Global: disable text selection, copy, and Google Translate long-press ── */
+html, body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Prevent Google Translate from activating on long press */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keep text selectable in inputs, textareas, and editable fields */
+input, textarea, [contenteditable], [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* Prevent browser default context menu on long press globally */
 .no-context-menu {
   -webkit-touch-callout: none;
@@ -271,11 +287,4 @@ input[type="checkbox"] {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-}
-
-/* Keep text selectable in input fields and textareas */
-input, textarea, [contenteditable] {
-  -webkit-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
 }

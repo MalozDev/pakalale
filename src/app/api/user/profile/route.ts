@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         location: user.location,
         phone: user.phone,
         bio: user.bio,
+        lastActiveAt: user.lastActiveAt?.toISOString?.() || null,
         createdAt: user.createdAt?.toISOString?.() || "",
         updatedAt: user.updatedAt?.toISOString?.() || "",
       },
@@ -58,7 +59,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Only allow updating certain fields
-    const allowedFields = ["firstName", "lastName", "phone", "location", "bio", "avatar"];
+    const allowedFields = ["firstName", "lastName", "phone", "location", "bio", "avatar", "lastActiveAt"];
     const safeUpdate: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (updateData[field] !== undefined) {
@@ -86,6 +87,7 @@ export async function PUT(request: NextRequest) {
         location: user.location,
         phone: user.phone,
         bio: user.bio,
+        lastActiveAt: user.lastActiveAt?.toISOString?.() || null,
         createdAt: user.createdAt?.toISOString?.() || "",
         updatedAt: user.updatedAt?.toISOString?.() || "",
       },

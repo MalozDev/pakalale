@@ -16,6 +16,19 @@ import { Upload, X, Loader2, ImageIcon, Edit } from "lucide-react";
 import { useUpload } from "@/hooks/useUpload";
 import UploadProgressBar from "@/components/UploadProgressBar";
 import { updateProduct, type ProductData } from "@/hooks/useApi";
+import ImageViewerModal from "@/components/ImageViewerModal";
+
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 interface EditProductModalProps {
   product: ProductData;
@@ -43,6 +56,9 @@ export default function EditProductModal({
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const [form, setForm] = useState({
     name: "",
@@ -151,38 +167,53 @@ export default function EditProductModal({
             {/* Image Upload */}
             <div className="space-y-2">
               <Label className="text-xs">Product Images</Label>
-              <div className="flex flex-wrap gap-2">
-                {images.map((img, i) => (
-                  <div
-                    key={i}
-                    className="relative w-20 h-20 rounded-lg overflow-hidden border border-border group"
-                  >
-                    <img
-                      src={img}
-                      alt={`Product ${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-2">
+                {images.length > 0 && (
+                  images.length === 1 ? (
+                    <div className="w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer relative group" onClick={() => { setViewerIndex(0); setViewerOpen(true); }}>
+                      {isVideoUrl(images[0]) ? (
+                        <video src={images[0]} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                      ) : (
+                        <img src={images[0]} alt="Product 1" className="w-full h-full object-cover" loading="lazy" />
+                      )}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(0); }} className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full h-48 grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
+                      {images.slice(0, 2).map((img, i) => (
+                        <div key={i} className="relative bg-muted cursor-pointer aspect-square h-full group" onClick={() => { setViewerIndex(i); setViewerOpen(true); }}>
+                          {isVideoUrl(img) ? (
+                            <video src={img} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                          ) : (
+                            <img src={img} alt={`Product ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                          )}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(i); }} className="absolute top-2 right-2 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X className="h-4 w-4" />
+                          </button>
+                          {i === 1 && images.length > 2 && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                              <span className="text-white text-lg font-bold">+{images.length - 2}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-20 h-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-colors text-muted-foreground hover:text-primary"
+                  className="w-full h-12 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex items-center justify-center gap-2 transition-colors text-muted-foreground hover:text-primary"
                 >
                   {uploading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <>
                       <ImageIcon className="h-5 w-5" />
-                      <span className="text-[9px]">Add</span>
+                      <span className="text-sm font-medium">Add Photo/Video</span>
                     </>
                   )}
                 </button>
@@ -313,6 +344,15 @@ export default function EditProductModal({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImageViewerModal
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        images={images}
+        initialIndex={viewerIndex}
+        onDeleteImage={removeImage}
+        alt="Product image"
+      />
     </>
   );
 }

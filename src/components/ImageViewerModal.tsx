@@ -22,6 +22,7 @@ interface ImageViewerModalProps {
   images: string[];
   initialIndex?: number;
   alt?: string;
+  onDeleteImage?: (index: number) => void;
 }
 
 export default function ImageViewerModal({
@@ -30,6 +31,7 @@ export default function ImageViewerModal({
   images,
   initialIndex = 0,
   alt = "",
+  onDeleteImage,
 }: ImageViewerModalProps) {
   useModalBack(isOpen, onClose);
 
@@ -79,12 +81,29 @@ export default function ImageViewerModal({
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-      >
-        <X className="h-5 w-5" />
-      </button>
+      <div className="absolute top-4 right-4 z-10 flex gap-3">
+        {onDeleteImage && (
+          <button
+            onClick={() => {
+              onDeleteImage(currentIndex);
+              if (images.length === 1) {
+                onClose();
+              } else if (currentIndex >= images.length - 1) {
+                setCurrentIndex(currentIndex - 1);
+              }
+            }}
+            className="p-2 bg-red-500/20 hover:bg-red-500/40 rounded-full text-red-500 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
       {images.length > 1 && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white/10 px-3 py-1 rounded-full">

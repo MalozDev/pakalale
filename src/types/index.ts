@@ -10,6 +10,7 @@ export interface User {
   phone?: string;
   bio?: string;
   interestedCategories?: string[];
+  lastActiveAt?: string;
   createdAt: string;
   updatedAt: string;
 }

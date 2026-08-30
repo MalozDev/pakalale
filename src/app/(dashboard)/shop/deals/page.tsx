@@ -19,7 +19,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/store/authStore";
+import { useDealStore } from "@/store/dealStore";
 import { useChats, updateDealStatus } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
 
 const statusConfig: Record<
   string,
@@ -108,21 +110,27 @@ export default function ShopDealsPage() {
     setUpdatingDeal(chatId);
     try {
       await updateDealStatus(chatId, newStatus, user.id);
+
+      // Optimistically update deal count when status becomes terminal
+      if (newStatus === "completed" || newStatus === "cancelled") {
+        useDealStore.getState().decrementDealCount();
+      }
+
+      // Notify other participants via socket
+      const chat = dealChats.find((c) => c.id === chatId);
+      const participantIds = chat?.participants?.map((p) => p.id) || [];
+      window.dispatchEvent(
+        new CustomEvent("deal-status-changed", {
+          detail: { chatId, dealStatus: newStatus, participantIds },
+        })
+      );
+
       refetch();
     } catch (e) {
       console.error("Failed to update deal status:", e);
     } finally {
       setUpdatingDeal(null);
     }
-  };
-
-  const formatTime = (dateStr: string) => {
-    const diff =
-      (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
-    if (diff < 1) return "Just now";
-    if (diff < 60) return `${Math.floor(diff)}m ago`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-    return `${Math.floor(diff / 1440)}d ago`;
   };
 
   return (
@@ -274,7 +282,7 @@ export default function ShopDealsPage() {
                       <div className="flex items-center gap-1 shrink-0 ml-2">
                         <Clock className="h-2.5 w-2.5 text-muted-foreground" />
                         <span className="text-[10px] text-muted-foreground">
-                          {formatTime(deal.lastMessageTime)}
+                          {formatTimeAgo(deal.lastMessageTime)}
                         </span>
                       </div>
                     </div>

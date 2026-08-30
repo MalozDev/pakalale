@@ -196,6 +196,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
 
+    // Sync shop profileImage to User.avatar so it reflects everywhere
+    if (updateData.profileImage !== undefined) {
+      try {
+        const User = (await import("@/models/User")).default;
+        await User.findByIdAndUpdate(shop.ownerId, { avatar: updateData.profileImage });
+        invalidateCache(`profile:${shop.ownerId}`);
+      } catch (e) {
+        console.error("Failed to sync avatar:", e);
+      }
+    }
+
     // Invalidate shops cache so new data is fetched
     invalidateCache("shops:");
     invalidateCache("shop:");

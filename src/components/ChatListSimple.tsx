@@ -1,15 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MessageSquare, Filter, Inbox } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, MessageSquare, Filter, Inbox, Check, CheckCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useChats, type ChatData } from "@/hooks/useApi";
+import { useAuthStore } from "@/store/authStore";
 import { useOnlineStore } from "@/store/onlineStore";
 import { cn } from "@/lib/utils";
+import { formatTimeShort } from "@/lib/formatTime";
+
+function formatLastMessage(content?: string, type?: string): string {
+  if (!content) return "No messages yet";
+  if (type === "image") {
+    if (content.match(/\.(mp4|webm|mov|avi|mkv)/i) || content.includes("/video/upload/")) {
+      return "🎬 Video";
+    }
+    return "📷 Photo";
+  }
+  if (type === "voice") return "🎤 Voice message";
+  if (type === "deal_update") return content;
+  if (type === "file") return "📎 File";
+  // Hide raw URLs for security
+  if (content.startsWith("http://") || content.startsWith("https://")) {
+    return "📎 Attachment";
+  }
+  return content;
+}
 
 interface ChatListSimpleProps {
   userId: string;
@@ -24,6 +45,9 @@ export default function ChatListSimple({
   onNewChat,
   onBack,
 }: ChatListSimpleProps) {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const profileBase = user?.role === "shop_owner" ? "/shop/profile" : "/customer/profile";
   const [searchQuery, setSearchQuery] = useState("");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { data, loading } = useChats(userId);
@@ -44,14 +68,7 @@ export default function ChatListSimple({
     )
     .filter((chat) => !showUnreadOnly || (chat.unreadCount ?? 0) > 0);
 
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const diff = (Date.now() - date.getTime()) / (1000 * 60 * 60);
-    if (diff < 1) return "Now";
-    if (diff < 24) return `${Math.floor(diff)}h`;
-    if (diff < 48) return "Yesterday";
-    return date.toLocaleDateString([], { month: "short", day: "numeric" });
-  };
+
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -140,28 +157,38 @@ export default function ChatListSimple({
               const hasUnread = unread > 0;
 
               return (
-                <button
+                <div
                   key={chat.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onChatSelect(chat)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onChatSelect(chat); }}
                   className={cn(
-                    "w-full p-3 border-b border-border hover:bg-muted/50 transition-colors text-left",
+                    "w-full p-3 border-b border-border hover:bg-muted/50 transition-colors text-left cursor-pointer",
                     hasUnread && "bg-muted/30"
                   )}
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
-                      <Avatar className="h-11 w-11">
-                        <AvatarFallback
-                          className={cn(
-                            "text-xs",
-                            hasUnread
-                              ? "bg-primary/10 text-primary font-bold"
-                              : "bg-muted"
-                          )}
-                        >
-                          {other?.name?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <a
+                        href={`${profileBase}/${other?.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="block"
+                      >
+                        <Avatar className="h-11 w-11">
+                          <AvatarImage src={other?.avatar} alt={other?.name} />
+                          <AvatarFallback
+                            className={cn(
+                              "text-xs",
+                              hasUnread
+                                ? "bg-primary/10 text-primary font-bold"
+                                : "bg-muted"
+                            )}
+                          >
+                            {other?.name?.charAt(0) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                      </a>
                       {/* Online indicator */}
                       {other?.id && onlineUserIds.has(other.id) ? (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
@@ -191,12 +218,12 @@ export default function ChatListSimple({
                           )}
                         >
                           {chat.lastMessageTime
-                            ? formatTime(chat.lastMessageTime)
+                            ? formatTimeShort(chat.lastMessageTime)
                             : ""}
                         </span>
                       </div>
 
-                      {chat.dealInfo && (
+                      {chat.type === "deal" && chat.dealInfo && (
                         <div className="flex items-center gap-1.5 mb-1">
                           <Badge
                             variant="secondary"
@@ -222,16 +249,28 @@ export default function ChatListSimple({
                       )}
 
                       <div className="flex items-center justify-between gap-2">
-                        <p
-                          className={cn(
-                            "text-xs truncate",
-                            hasUnread
-                              ? "text-foreground font-medium"
-                              : "text-muted-foreground"
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                          {/* Delivery ticks for own messages */}
+                          {chat.lastMessage?.senderId === userId && chat.lastMessage && (
+                            <span className="shrink-0">
+                              {chat.lastMessage.isRead && (chat.lastMessage.readBy?.length ?? 0) > 0 ? (
+                                <CheckCheck className="h-3.5 w-3.5 text-blue-400" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                              )}
+                            </span>
                           )}
-                        >
-                          {chat.lastMessage?.content || "No messages yet"}
-                        </p>
+                          <p
+                            className={cn(
+                              "text-xs truncate",
+                              hasUnread
+                                ? "text-foreground font-medium"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            {formatLastMessage(chat.lastMessage?.content, chat.lastMessage?.type)}
+                          </p>
+                        </div>
 
                         {/* Unread count badge */}
                         {hasUnread && (
@@ -242,7 +281,7 @@ export default function ChatListSimple({
                       </div>
                     </div>
                   </div>
-                </button>
+                </div>
               );
             })}
 

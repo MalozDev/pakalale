@@ -5,8 +5,9 @@ import ShopNav from "@/components/ShopNav";
 import { ShoppingBag, Filter, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuthStore } from "@/store/authStore";
-import { useOrders } from "@/hooks/useApi";
+import { useAuthStore } from "@/store/authStore";import { useOrders } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
+
 
 const statusColors: Record<string, string> = {
   completed: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -15,13 +16,6 @@ const statusColors: Record<string, string> = {
   preparing: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   ready: "bg-teal-500/10 text-teal-500 border-teal-500/20",
   cancelled: "bg-destructive/10 text-destructive border-destructive/20",
-};
-
-const formatTime = (dateStr: string) => {
-  const diff = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
-  if (diff < 1) return "Just now";
-  if (diff < 24) return `${Math.floor(diff)}h ago`;
-  return `${Math.floor(diff / 24)}d ago`;
 };
 
 export default function OrdersPage() {
@@ -76,7 +70,7 @@ export default function OrdersPage() {
                         <div className="min-w-0">
                           <h4 className="text-sm font-medium truncate">{customerName}</h4>
                           <p className="text-xs text-muted-foreground truncate">{productNames}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{formatTime(order.createdAt)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{formatTimeAgo(order.createdAt)}</p>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-sm font-medium">K{order.total.toLocaleString()}</p>

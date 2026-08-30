@@ -19,8 +19,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useAuthStore } from "@/store/authStore";
-import { useChats } from "@/hooks/useApi";
+import { useAuthStore } from "@/store/authStore";import { useChats } from "@/hooks/useApi";
+import { formatTimeAgo } from "@/lib/formatTime";
+
 
 const statusConfig: Record<
   string,
@@ -125,15 +126,6 @@ export default function DealHistoryPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const formatTime = (dateStr: string) => {
-    const diff =
-      (Date.now() - new Date(dateStr).getTime()) / (1000 * 60);
-    if (diff < 1) return "Just now";
-    if (diff < 60) return `${Math.floor(diff)}m ago`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-    return `${Math.floor(diff / 1440)}d ago`;
   };
 
   return (
@@ -322,7 +314,7 @@ export default function DealHistoryPage() {
                           </p>
                         )}
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {formatTime(deal.lastMessageTime)}
+                          {formatTimeAgo(deal.lastMessageTime)}
                         </p>
                       </div>
                     </div>
