@@ -681,11 +681,7 @@ export default function ChatPage() {
                       </div>
                     )}
                     {!isMyOffer && (
-                      <div className="flex gap-1.5">
-                        <Button size="sm" className="h-6 text-[9px] px-2 bg-emerald-500 text-white hover:bg-emerald-600 flex-1" onClick={() => handleDealAction("confirmed" as const)}>
-                          <CheckCircle2 className="h-3 w-3 mr-1" />Accept K{lastOfferPrice?.toLocaleString()}
-                        </Button>
-                      </div>
+                      <p className="text-[10px] text-muted-foreground">The shop owner will accept or decline this deal</p>
                     )}
                     <div className="flex gap-1.5">
                       <div className="relative flex-1">

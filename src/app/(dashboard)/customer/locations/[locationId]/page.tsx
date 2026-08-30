@@ -15,7 +15,19 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import DealModal from "@/components/DealModal";
 import DealSuccessPopup from "@/components/DealSuccessPopup";
+import ImageViewerModal from "@/components/ImageViewerModal";
 
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 export default function LocationDetailPage() {
   const { locationId } = useParams<{ locationId: string }>();
   const searchParams = useSearchParams();
@@ -30,6 +42,16 @@ export default function LocationDetailPage() {
   const [showDealModal, setShowDealModal] = useState(false);
   const [dealSending, setDealSending] = useState(false);
   const [dealSuccess, setDealSuccess] = useState<{ productName: string; quantity: number; totalPrice: number; chatId: string } | null>(null);
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  const openViewer = (images: string[], index: number) => {
+    setViewerImages(images);
+    setViewerIndex(index);
+    setViewerOpen(true);
+  };
   const dealCount = useDealStore((s) => s.dealCount);
   const incrementDealCount = useDealStore((s) => s.incrementDealCount);
 
@@ -226,13 +248,41 @@ export default function LocationDetailPage() {
                       >
                         <CardContent className="p-3">
                           {/* Product image or placeholder */}
-                          <div className="h-24 bg-muted rounded-lg flex items-center justify-center mb-2 overflow-hidden relative">
-                            {product.images && product.images.length > 0 ? (                               <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                          <div className="mb-2 relative">
+                            {product.images && product.images.length > 0 ? (
+                              product.images.length === 1 ? (
+                                <div className="h-24 w-full bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={(e) => { e.stopPropagation(); openViewer(product.images!, 0); }}>
+                                  {isVideoUrl(product.images[0]) ? (
+                                    <video src={product.images[0]} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                                  ) : (
+                                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="h-24 grid grid-cols-2 gap-0.5 rounded-lg overflow-hidden">
+                                  {product.images.slice(0, 2).map((img, i) => (
+                                    <div key={i} className="relative bg-muted cursor-pointer aspect-square h-full" onClick={(e) => { e.stopPropagation(); openViewer(product.images!, i); }}>
+                                      {isVideoUrl(img) ? (
+                                        <video src={img} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                                      ) : (
+                                        <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                      )}
+                                      {i === 1 && product.images!.length > 2 && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                          <span className="text-white text-lg font-bold">+{product.images!.length - 2}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )
                             ) : (
-                              <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                              <div className="h-24 w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                              </div>
                             )}
                             {product.discount && product.discount > 0 && (
-                              <div className="absolute top-1 right-1">
+                              <div className="absolute top-1 right-1 z-10 pointer-events-none">
                                 <Badge className="bg-rose-500 text-white text-[9px] px-1 h-4 border-0">
                                   -{product.discount}%
                                 </Badge>
@@ -371,6 +421,15 @@ export default function LocationDetailPage() {
           setDealSuccess(null);
         }}
         onContinueBrowsing={() => setDealSuccess(null)}
+      />
+
+      {/* Image Viewer */}
+      <ImageViewerModal
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        alt="Product image"
       />
     </div>
   );

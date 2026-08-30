@@ -16,6 +16,18 @@ import ImageViewerModal from "@/components/ImageViewerModal";
 import { useAuthStore } from "@/store/authStore";
 import { createChat } from "@/hooks/useApi";
 
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+function isVideoUrl(url: string): boolean {
+  try {
+    const ext = url.split(".").pop()?.split("?")[0]?.toLowerCase();
+    if (ext && VIDEO_EXTENSIONS.includes(ext)) return true;
+    if (url.includes("/video/upload/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 interface UserProfile {
   id: string;
   firstName: string;
@@ -232,12 +244,27 @@ export default function ShopProfilePage() {
                     {post.images && post.images.length > 0 && (
                       <div className="mt-3">
                         {post.images.length === 1 ? (
-                          <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openViewer(post.images!, 0)}>                             <img src={post.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          <div className="w-full h-48 sm:h-64 bg-muted rounded-lg overflow-hidden cursor-pointer" onClick={() => openViewer(post.images!, 0)}>
+                            {isVideoUrl(post.images[0]) ? (
+                              <video src={post.images[0]} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                            ) : (
+                              <img src={post.images[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
+                            )}
                           </div>
                         ) : (
                           <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                            {post.images.slice(0, 4).map((img, i) => (
-                              <div key={i} className="relative bg-muted cursor-pointer aspect-square" onClick={() => openViewer(post.images!, i)}>                                 <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                            {post.images.slice(0, 2).map((img, i) => (
+                              <div key={i} className="relative bg-muted cursor-pointer aspect-square" onClick={() => openViewer(post.images!, i)}>
+                                {isVideoUrl(img) ? (
+                                  <video src={img} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+                                ) : (
+                                  <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                )}
+                                {i === 1 && post.images!.length > 2 && (
+                                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                    <span className="text-white text-lg font-bold">+{post.images!.length - 2}</span>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

@@ -233,7 +233,7 @@ export default function FeedPost({
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-0.5 rounded-lg overflow-hidden">
-                {post.images.slice(0, 4).map((img, i) => (
+                {post.images.slice(0, 2).map((img, i) => (
                   <div
                     key={i}
                     className="relative bg-muted cursor-pointer aspect-square"
@@ -244,9 +244,9 @@ export default function FeedPost({
                     ) : (
                       <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                     )}
-                    {i === 3 && post.images!.length > 4 && (
+                    {i === 1 && post.images!.length > 2 && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-white text-lg font-bold">+{post.images!.length - 4}</span>
+                        <span className="text-white text-lg font-bold">+{post.images!.length - 2}</span>
                       </div>
                     )}
                   </div>

@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
 
     const roles = participantUsers.map((u) => u.role);
     const allSameRole = roles.every((r) => r === roles[0]);
-    if (allSameRole && roles[0] !== "admin") {
+    if (allSameRole && roles[0] !== "admin" && roles[0] !== "customer") {
       return NextResponse.json({ error: "Cannot create chat between same account types" }, { status: 400 });
     }
 
