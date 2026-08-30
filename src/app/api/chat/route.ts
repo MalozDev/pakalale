@@ -387,6 +387,16 @@ export async function PUT(request: NextRequest) {
       if (!chat) return NextResponse.json({ error: "Chat not found" }, { status: 404 });
       if (!chat.dealInfo) return NextResponse.json({ error: "No deal in this chat" }, { status: 400 });
 
+      // Only the shop owner can confirm or complete a deal
+      const shopRestrictedStatuses = ["confirmed", "completed"];
+      if (shopRestrictedStatuses.includes(body.dealStatus)) {
+        const User = (await import("@/models/User")).default;
+        const sender = await User.findById(body.senderId).select("role").lean();
+        if (!sender || sender.role !== "shop_owner") {
+          return NextResponse.json({ error: "Only the shop owner can confirm or complete a deal" }, { status: 403 });
+        }
+      }
+
       const previousStatus = chat.dealInfo.status;
       chat.dealInfo.status = body.dealStatus as "pending" | "negotiating" | "confirmed" | "completed" | "cancelled";
       await chat.save();
