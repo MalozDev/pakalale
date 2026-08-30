@@ -124,13 +124,15 @@ export async function GET(request: NextRequest) {
       .filter(Boolean);
 
     const shops = shopOwnerIds.length > 0
-      ? await Shop.find({ ownerId: { $in: shopOwnerIds } }).select("ownerId locationId status specialties").lean()
+      ? await Shop.find({ ownerId: { $in: shopOwnerIds } }).select("ownerId name profileImage locationId status specialties").lean()
       : [];
 
-    const shopByOwner = new Map<string, { shopId: string; locationId: string; status: string; specialties: string[] }>();
+    const shopByOwner = new Map<string, { shopId: string; shopName: string; shopAvatar: string; locationId: string; status: string; specialties: string[] }>();
     shops.forEach((s) => {
       shopByOwner.set(toStr(s.ownerId), {
         shopId: toStr(s._id),
+        shopName: String(s.name || ""),
+        shopAvatar: String(s.profileImage || ""),
         locationId: toStr(s.locationId),
         status: String(s.status),
         specialties: s.specialties || [],
@@ -160,6 +162,9 @@ export async function GET(request: NextRequest) {
       const ownerShop = hasAuthor && authorObj.role === "shop_owner" ? shopByOwner.get(toStr(p.authorId)) : undefined;
       const pRecord = p as unknown as Record<string, unknown>;
 
+      const isShopOwner = hasAuthor && authorObj.role === "shop_owner";
+      const shopData = isShopOwner && ownerShop ? shopByOwner.get(toStr(p.authorId)) : null;
+
       return {
         id: p._id.toString(),
         content: p.content,
@@ -168,8 +173,8 @@ export async function GET(request: NextRequest) {
         author: hasAuthor
           ? {
               id: toStr(p.authorId),
-              name: `${authorObj.firstName} ${authorObj.lastName}`,
-              avatar: authorObj.avatar,
+              name: shopData?.shopName || `${authorObj.firstName} ${authorObj.lastName}`,
+              avatar: shopData?.shopAvatar || authorObj.avatar,
               role: authorObj.role,
               shopId: ownerShop?.shopId || null,
               shopLocationId: ownerShop?.locationId || null,

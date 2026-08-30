@@ -122,9 +122,13 @@ export default function CustomerDashboard() {
                 >
                   <CardContent className="p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="h-9 w-9 bg-gradient-to-br from-teal-500 to-primary rounded-lg flex items-center justify-center shrink-0">
-                        <Store className="h-4 w-4 text-white" />
-                      </div>
+                      {shop.profileImage ? (
+                        <img src={shop.profileImage} alt={shop.name} className="h-9 w-9 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="h-9 w-9 bg-gradient-to-br from-teal-500 to-primary rounded-lg flex items-center justify-center shrink-0">
+                          <Store className="h-4 w-4 text-white" />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
                           <h4 className="font-medium text-xs truncate">{shop.name}</h4>

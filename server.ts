@@ -91,11 +91,17 @@ app.prepare().then(() => {
     });
 
     socket.on("typing", (data: { chatId: string; userId: string; userName: string }) => {
+      // Broadcast to chat room members
       socket.to(data.chatId).emit("user_typing", data);
+      // Also broadcast globally so chat list can show typing status
+      io.emit("user_typing_global", data);
     });
 
     socket.on("stop_typing", (data: { chatId: string; userId: string }) => {
+      // Broadcast to chat room members
       socket.to(data.chatId).emit("user_stop_typing", data);
+      // Also broadcast globally
+      io.emit("user_stop_typing_global", data);
     });
 
     socket.on("deal_status_changed", (data: { chatId: string; dealStatus: string; participantIds: string[] }) => {

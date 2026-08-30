@@ -83,10 +83,16 @@ export async function GET(request: NextRequest) {
 
     // Batch fetch all data in parallel — 3 queries total instead of N+1
     const User = (await import("@/models/User")).default;
-    const [participants, lastMessages, unreadCounts] = await Promise.all([
+    const ShopModel = (await import("@/models/Shop")).default;
+    const [participants, shops, lastMessages, unreadCounts] = await Promise.all([
       allParticipantIds.length > 0
         ? User.find({ _id: { $in: allParticipantIds } })
             .select("firstName lastName avatar role")
+            .lean()
+        : [],
+      allParticipantIds.length > 0
+        ? ShopModel.find({ ownerId: { $in: allParticipantIds } })
+            .select("ownerId name profileImage")
             .lean()
         : [],
       lastMessageIds.length > 0
@@ -111,6 +117,8 @@ export async function GET(request: NextRequest) {
     // Build lookup maps
     const userMap = new Map<string, Record<string, unknown>>();
     participants.forEach((p) => userMap.set(toStr(p._id), p as unknown as Record<string, unknown>));
+    const shopMap = new Map<string, { name: string; profileImage: string }>();
+    shops.forEach((s) => shopMap.set(toStr(s.ownerId), { name: String(s.name || ""), profileImage: String(s.profileImage || "") }));
     const msgMap = new Map<string, Record<string, unknown>>();
     lastMessages.forEach((m) => msgMap.set(toStr(m._id), m as unknown as Record<string, unknown>));
     const unreadMap = new Map<string, number>();
@@ -127,9 +135,15 @@ export async function GET(request: NextRequest) {
         const parts = (chat.participants || []).map((pid) => {
           const uid = toStr(pid);
           const u = userMap.get(uid);
-          return u
-            ? { id: uid, name: `${u.firstName} ${u.lastName}`, avatar: u.avatar, role: u.role }
-            : { id: uid, name: "", avatar: undefined, role: undefined };
+          if (!u) return { id: uid, name: "", avatar: undefined, role: undefined };
+          // For shop owners, use shop name/avatar instead of personal name/avatar
+          const shop = u.role === "shop_owner" ? shopMap.get(uid) : null;
+          return {
+            id: uid,
+            name: shop?.name || `${u.firstName} ${u.lastName}`,
+            avatar: shop?.profileImage || u.avatar,
+            role: u.role,
+          };
         });
         const otherParticipant = parts.find((p) => p.id !== userId) || null;
 
@@ -505,6 +519,19 @@ export async function PUT(request: NextRequest) {
       const msg = await Message.findById(messageId);
       await Message.findByIdAndDelete(messageId);
       if (msg) invalidateCache(`chat:messages:${msg.chatId}`);
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "archive" && body.chatId && body.userId) {
+      // Archive chat for this user by removing them from participants
+      const chat = await Chat.findById(body.chatId);
+      if (!chat) return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+      await Chat.findByIdAndUpdate(body.chatId, { isActive: false });
+      invalidateCache(`chat:list:${body.userId}`);
+      // Also invalidate other participants
+      chat.participants.forEach((p: mongoose.Types.ObjectId) => {
+        invalidateCache(`chat:list:${toStr(p)}`);
+      });
       return NextResponse.json({ success: true });
     }
 

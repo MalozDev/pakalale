@@ -40,6 +40,32 @@ export default function LocationDetailPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedShop, setSelectedShop] = useState<string | null>(initialShopId);
+
+  // Push history entry when selecting a shop so back returns to shops list
+  const selectShop = (shopId: string | null) => {
+    if (shopId) {
+      setSelectedShop(shopId);
+      window.history.pushState({ shopId }, "", `?shopId=${shopId}`);
+    } else {
+      setSelectedShop(null);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  };
+
+  // Handle native back button
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const shopId = params.get("shopId");
+      if (shopId) {
+        setSelectedShop(shopId);
+      } else {
+        setSelectedShop(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(null);
   const [dealProduct, setDealProduct] = useState<ProductData | null>(null);
   const [showDealModal, setShowDealModal] = useState(false);
@@ -152,7 +178,7 @@ export default function LocationDetailPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => selectedShop ? setSelectedShop(null) : router.back()}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => selectedShop ? selectShop(null) : router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-sm font-bold truncate">{selectedShop ? currentShop?.name || "Shop" : location?.name || "Location"}</h1>
@@ -373,7 +399,7 @@ export default function LocationDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filtered.map((shop) => (
                     <Card key={shop.id} className="bg-card border-border hover:border-primary/20 transition-colors cursor-pointer"
-                      onClick={() => setSelectedShop(shop.id)}>
+                      onClick={() => selectShop(shop.id)}>
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <Avatar className="h-12 w-12 shrink-0">
@@ -405,7 +431,7 @@ export default function LocationDetailPage() {
                           ))}
                         </div>
                         <Button size="sm" variant="outline" className="w-full h-7 text-[11px]"
-                          onClick={(e) => { e.stopPropagation(); setSelectedShop(shop.id); }}>
+                          onClick={(e) => { e.stopPropagation(); selectShop(shop.id); }}>
                           <Package className="h-3 w-3 mr-1" />Browse Products
                         </Button>
                       </CardContent>

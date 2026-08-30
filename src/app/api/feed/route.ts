@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         : [],
       authorIds.length > 0
         ? Shop.find({ ownerId: { $in: authorIds } })
-            .select("ownerId locationId status")
+            .select("ownerId name profileImage locationId status")
             .lean()
         : [],
     ]);
@@ -132,10 +132,12 @@ export async function GET(request: NextRequest) {
     const authorMap = new Map<string, Record<string, unknown>>();
     authors.forEach((a) => authorMap.set(toStr(a._id), a as unknown as Record<string, unknown>));
 
-    const shopByOwner = new Map<string, { shopId: string; locationId: string; status: string }>();
+    const shopByOwner = new Map<string, { shopId: string; shopName: string; shopAvatar: string; locationId: string; status: string }>();
     shops.forEach((s) => {
       shopByOwner.set(toStr(s.ownerId), {
         shopId: toStr(s._id),
+        shopName: String(s.name || ""),
+        shopAvatar: String(s.profileImage || ""),
         locationId: toStr(s.locationId),
         status: String(s.status),
       });
@@ -151,6 +153,10 @@ export async function GET(request: NextRequest) {
         const images = (p.images as unknown[]) || [];
         const product = p.product as Record<string, unknown> | undefined;
 
+        // For shop owners, use shop name/avatar instead of personal name/avatar
+        const isShopOwner = hasAuthor && authorObj!.role === "shop_owner";
+        const shopData = isShopOwner && ownerShop ? shopByOwner.get(toStr(p.authorId)) : null;
+
         return {
           id: String(p._id),
           content: (() => { const c = String(p.content || ""); return c.length > 500 ? c.slice(0, 500) + "..." : c; })(),
@@ -159,8 +165,8 @@ export async function GET(request: NextRequest) {
           author: hasAuthor
             ? {
                 id: toStr(p.authorId),
-                name: `${authorObj.firstName} ${authorObj.lastName}`,
-                avatar: authorObj.avatar,
+                name: shopData?.shopName || `${authorObj.firstName} ${authorObj.lastName}`,
+                avatar: shopData?.shopAvatar || authorObj.avatar,
                 role: authorObj.role,
                 shopId: ownerShop?.shopId || null,
                 shopLocationId: ownerShop?.locationId || null,

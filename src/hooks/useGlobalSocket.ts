@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useDealStore } from "@/store/dealStore";
 import { useOnlineStore } from "@/store/onlineStore";
+import { useTypingStore } from "@/store/typingStore";
 
 const SOCKET_URL = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -22,6 +23,8 @@ export function useGlobalSocket(userId?: string) {
   const setOnlineUsers = useOnlineStore((s) => s.setOnlineUsers);
   const addOnlineUser = useOnlineStore((s) => s.addUser);
   const removeOnlineUser = useOnlineStore((s) => s.removeUser);
+  const setTyping = useTypingStore((s) => s.setTyping);
+  const clearTyping = useTypingStore((s) => s.clearTyping);
 
   useEffect(() => {
     if (!userId) return;
@@ -80,6 +83,17 @@ export function useGlobalSocket(userId?: string) {
 
     socket.on("user_offline", (data: { userId: string }) => {
       removeOnlineUser(data.userId);
+    });
+
+    // ── Global typing status for chat list ──
+    socket.on("user_typing_global", (data: { chatId: string; userId: string; userName: string }) => {
+      if (data.userId !== userId) {
+        setTyping(data.chatId, data.userId, data.userName);
+      }
+    });
+
+    socket.on("user_stop_typing_global", (data: { chatId: string; userId: string }) => {
+      clearTyping(data.chatId, data.userId);
     });
 
     // ── Real-time deal count ──

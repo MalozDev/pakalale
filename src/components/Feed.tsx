@@ -375,6 +375,45 @@ export default function Feed({ authorId }: FeedProps) {
               <Tag className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Tag</span>
             </Button>
           </div>
+
+          {/* Live preview of attachments outside the dialog */}
+          {(postMedia.length > 0 || postLocation || taggedShops.length > 0) && (
+            <div className="mt-2 space-y-2">
+              {/* Media previews */}
+              {postMedia.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto">
+                  {postMedia.map((media, i) => (
+                    <div key={i} className="relative shrink-0">
+                      {media.type === "video" ? (
+                        <video src={media.url} className="h-16 w-16 object-cover rounded-lg" muted />
+                      ) : (
+                        <img src={media.url} className="h-16 w-16 object-cover rounded-lg" alt="" />
+                      )}
+                      <button onClick={() => handleRemoveMedia(i)} className="absolute -top-1 -right-1 bg-black/60 rounded-full p-0.5"><X className="h-2.5 w-2.5 text-white" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Location tag */}
+              {postLocation && (
+                <div className="flex items-center gap-1.5 text-[10px] text-primary bg-primary/5 rounded-lg px-2 py-1">
+                  <MapPin className="h-3 w-3" />{postLocation}
+                  <button onClick={() => setPostLocation("")}><X className="h-2.5 w-2.5" /></button>
+                </div>
+              )}
+              {/* Tagged shops */}
+              {taggedShops.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {taggedShops.map((shop) => (
+                    <span key={shop.id} className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary rounded-full px-2 py-0.5">
+                      @{shop.name}
+                      <button onClick={() => setTaggedShops((prev) => prev.filter((s) => s.id !== shop.id))}><X className="h-2.5 w-2.5" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

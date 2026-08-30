@@ -48,9 +48,15 @@ export async function GET(request: NextRequest) {
       const cached = getCached(cacheKey);
       if (cached) return NextResponse.json(cached);
 
-      const shop = await Shop.findById(id)
+      // Try finding by _id first, then by ownerId (shop settings passes userId)
+      let shop = await Shop.findById(id)
         .select("name description ownerId locationId status contact hours coverImage profileImage images specialties rating totalReviews createdAt updatedAt")
         .lean();
+      if (!shop) {
+        shop = await Shop.findOne({ ownerId: id })
+          .select("name description ownerId locationId status contact hours coverImage profileImage images specialties rating totalReviews createdAt updatedAt")
+          .lean();
+      }
       if (!shop) {
         return NextResponse.json({ error: "Shop not found" }, { status: 404 });
       }
@@ -191,17 +197,27 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Shop ID is required" }, { status: 400 });
     }
 
-    const shop = await Shop.findByIdAndUpdate(id, updateData, { new: true }).lean();
+    // Find by _id first, then by ownerId (shop settings passes userId)
+    let shop = await Shop.findById(id).lean();
+    if (!shop) {
+      shop = await Shop.findOne({ ownerId: id }).lean();
+    }
     if (!shop) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    // Update using the actual shop _id
+    const updatedShop = await Shop.findByIdAndUpdate(shop._id, updateData, { new: true }).lean();
+    if (!updatedShop) {
+      return NextResponse.json({ error: "Failed to update shop" }, { status: 500 });
     }
 
     // Sync shop profileImage to User.avatar so it reflects everywhere
     if (updateData.profileImage !== undefined) {
       try {
         const User = (await import("@/models/User")).default;
-        await User.findByIdAndUpdate(shop.ownerId, { avatar: updateData.profileImage });
-        invalidateCache(`profile:${shop.ownerId}`);
+        await User.findByIdAndUpdate(updatedShop.ownerId, { avatar: updateData.profileImage });
+        invalidateCache(`profile:${updatedShop.ownerId}`);
       } catch (e) {
         console.error("Failed to sync avatar:", e);
       }
