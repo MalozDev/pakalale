@@ -71,9 +71,9 @@ export default function ChatListSimple({
   const handleTouchMove = useCallback((e: React.TouchEvent, chatId: string) => {
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
-    if (dx > 50 && Math.abs(dx) > Math.abs(dy)) {
+    if (dx < -50 && Math.abs(dx) > Math.abs(dy)) {
       setSwipedChatId(chatId);
-    } else if (dx < -20) {
+    } else if (dx > 20) {
       setSwipedChatId(null);
     }
   }, []);

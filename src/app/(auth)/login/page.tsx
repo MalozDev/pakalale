@@ -49,19 +49,30 @@ export default function LoginPage() {
       sessionStorage.removeItem("redirectAfterLogin");
 
       // Validate redirect URL matches user role
-      const isShopOwner = result.user.role === "shop_owner";
+      const userRole = result.user.role;
+      const isShopOwner = userRole === "shop_owner";
+      const isAdmin = userRole === "admin";
       const isCustomerRoute = redirectUrl?.startsWith("/customer");
       const isShopRoute = redirectUrl?.startsWith("/shop");
+      const isAdminRoute = redirectUrl?.startsWith("/admin");
+
+      // Default destination by role
+      const defaultDest = isAdmin ? "/admin" : isShopOwner ? "/shop/feed" : "/customer";
 
       if (redirectUrl && redirectUrl !== "/login" && redirectUrl !== "/signup") {
         // Block cross-role redirects
-        if ((isShopOwner && isCustomerRoute) || (!isShopOwner && isShopRoute)) {
-          router.push(isShopOwner ? "/shop/feed" : "/customer");
+        if (
+          (isAdmin && !isAdminRoute) ||
+          (isShopOwner && isCustomerRoute) ||
+          (!isShopOwner && !isAdmin && isShopRoute) ||
+          (!isShopOwner && !isAdmin && isAdminRoute)
+        ) {
+          router.push(defaultDest);
         } else {
           router.push(redirectUrl);
         }
       } else {
-        router.push(isShopOwner ? "/shop/feed" : "/customer");
+        router.push(defaultDest);
       }
     } catch {
       setError("Network error. Please try again.");

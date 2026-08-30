@@ -56,6 +56,12 @@ export default function DashboardLayout({
 
   const isCustomer = pathname.startsWith("/customer");
   const isShop = pathname.startsWith("/shop");
+  const isAdmin = pathname.startsWith("/admin");
+
+  // Admin routes are handled by (admin) layout — skip dashboard layout rendering
+  if (isAdmin) {
+    return <>{children}</>;
+  }
 
   // Role-based route protection
   if (isCustomer && user.role === "shop_owner") {

@@ -27,6 +27,15 @@ export interface IShop extends Document {
   responseRate?: number;
   avgResponseTime?: number;
   demandScore?: number;
+  verificationDocuments?: {
+    businessLicense?: string;
+    taxCertificate?: string;
+    nationalId?: string;
+    other?: string[];
+  };
+  verificationNotes?: string;
+  verifiedAt?: Date;
+  rejectedReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +68,15 @@ const ShopSchema = new Schema<IShop>(
     responseRate: { type: Number, default: 0 },
     avgResponseTime: { type: Number, default: 0 },
     demandScore: { type: Number, default: 0 },
+    verificationDocuments: {
+      businessLicense: { type: String },
+      taxCertificate: { type: String },
+      nationalId: { type: String },
+      other: [{ type: String }],
+    },
+    verificationNotes: { type: String },
+    verifiedAt: { type: Date },
+    rejectedReason: { type: String },
   },
   { timestamps: true }
 );

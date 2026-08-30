@@ -327,7 +327,7 @@ export default function MessageBubble({
             )}
           >
             {message.type === "voice" ? (
-              <VoiceMessage audioBase64={message.content} isOwn={isOwn} />
+              <VoiceMessage audioSrc={message.content} isOwn={isOwn} />
             ) : isEditing ? (
               <div className="min-w-[180px]">
                 <textarea

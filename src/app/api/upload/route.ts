@@ -58,9 +58,13 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    // Cloudinary only supports "image", "video", and "raw" resource types.
+    // Audio files must be uploaded as "video".
+    const cloudinaryType: "image" | "video" | "auto" = detectedType === "audio" ? "video" : detectedType;
+
     const result = await uploadToCloudinary(buffer, {
       folder: subFolder,
-      resourceType: detectedType,
+      resourceType: cloudinaryType,
       transformation,
       filename: file.name,
     });

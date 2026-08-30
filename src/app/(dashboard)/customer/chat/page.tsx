@@ -244,6 +244,32 @@ export default function ChatPage() {
     };
   }, [typingUser]);
 
+  const pendingVoiceIdRef = useRef<string | null>(null);
+
+  const handlePendingVoice = (blobUrl: string) => {
+    if (!activeChat || !user) return;
+    const senderName = `${user.firstName} ${user.lastName}`;
+    const tempId = `pending-voice-${Date.now()}`;
+    pendingVoiceIdRef.current = tempId;
+    const pendingMsg: MessageData = {
+      id: tempId,
+      chatId: activeChat.id,
+      senderId: user.id,
+      senderName,
+      senderRole: "customer",
+      content: blobUrl,
+      type: "voice",
+      isRead: false,
+      readBy: [],
+      timestamp: new Date().toISOString(),
+    };
+    setPendingMessages((prev) => [...prev, pendingMsg]);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      isUserScrolledUp.current = false;
+    }, 50);
+  };
+
   const handleSendMessage = async (
     content: string,
     type?: "text" | "image" | "file" | "voice"
@@ -251,23 +277,33 @@ export default function ChatPage() {
     if (!content.trim() || !activeChat || !user) return;
 
     const senderName = `${user.firstName} ${user.lastName}`;
-    const tempId = `pending-${Date.now()}`;
+    const existingVoiceId = pendingVoiceIdRef.current;
+    pendingVoiceIdRef.current = null;
+    let tempId = `pending-${Date.now()}`;
 
-    const pendingMsg: MessageData = {
-      id: tempId,
-      chatId: activeChat.id,
-      senderId: user.id,
-      senderName,
-      senderRole: "customer",
-      content,
-      type: type || "text",
-      isRead: false,
-      readBy: [],
-      replyTo: replyTo || undefined,
-      timestamp: new Date().toISOString(),
-    };
-
-    setPendingMessages((prev) => [...prev, pendingMsg]);
+    // For voice notes, the pending message was already shown with a blob URL.
+    // Update it in place with the Cloudinary URL instead of creating a duplicate.
+    if (existingVoiceId && type === "voice") {
+      tempId = existingVoiceId;
+      setPendingMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, content } : m))
+      );
+    } else {
+      const pendingMsg: MessageData = {
+        id: tempId,
+        chatId: activeChat.id,
+        senderId: user.id,
+        senderName,
+        senderRole: "customer",
+        content,
+        type: type || "text",
+        isRead: false,
+        readBy: [],
+        replyTo: replyTo || undefined,
+        timestamp: new Date().toISOString(),
+      };
+      setPendingMessages((prev) => [...prev, pendingMsg]);
+    }
 
     // Scroll to bottom immediately for sent messages
     setTimeout(() => {
@@ -871,6 +907,7 @@ export default function ChatPage() {
       <MessageInput
         onSendMessage={handleSendMessage}
         onSendImage={handleSendImage}
+        onPendingVoice={handlePendingVoice}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
         placeholder={`Message ${otherName}...`}

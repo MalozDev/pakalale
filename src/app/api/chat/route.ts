@@ -545,6 +545,26 @@ export async function PUT(request: NextRequest) {
       const chat = await Chat.findById(body.chatId);
       if (!chat) return NextResponse.json({ error: "Chat not found" }, { status: 404 });
       await Chat.findByIdAndUpdate(body.chatId, { isActive: false });
+
+      // If this is a deal chat, auto-cancel the deal
+      if (chat.type === "deal" && chat.dealInfo && chat.dealInfo.status !== "cancelled" && chat.dealInfo.status !== "completed") {
+        chat.dealInfo.status = "cancelled";
+        await chat.save();
+
+        // Create a system message about the cancellation
+        await Message.create({
+          chatId: body.chatId,
+          senderId: body.userId,
+          senderName: "System",
+          senderRole: "customer",
+          content: "Deal has been cancelled ✗",
+          type: "deal_update",
+          timestamp: new Date(),
+          isRead: false,
+          readBy: [],
+        });
+      }
+
       invalidateCache(`chat:list:${body.userId}`);
       // Also invalidate other participants
       chat.participants.forEach((p: mongoose.Types.ObjectId) => {

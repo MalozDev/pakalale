@@ -51,7 +51,7 @@ export default function SignupPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated && user) {
-      router.push(user.role === "shop_owner" ? "/shop/feed" : "/customer");
+      router.push(user.role === "admin" ? "/admin" : user.role === "shop_owner" ? "/shop/feed" : "/customer");
     }
   }, [isAuthenticated, user, router]);
 
@@ -107,7 +107,7 @@ export default function SignupPage() {
       if (loginRes.ok && loginData.user) {
         login(loginData.user);
         // Role-based redirect
-        router.push(loginData.user.role === "shop_owner" ? "/shop/feed" : "/customer");
+        router.push(loginData.user.role === "admin" ? "/admin" : loginData.user.role === "shop_owner" ? "/shop/feed" : "/customer");
       }
     } catch {
       setError("Network error. Please try again.");
@@ -158,7 +158,7 @@ export default function SignupPage() {
       if (loginRes.ok && loginData.user) {
         login(loginData.user);
         // Role-based redirect (shop_owner goes to shop, customer to customer)
-        router.push(loginData.user.role === "shop_owner" ? "/shop/feed" : "/customer");
+        router.push(loginData.user.role === "admin" ? "/admin" : loginData.user.role === "shop_owner" ? "/shop/feed" : "/customer");
       }
     } catch {
       setError("Network error. Please try again.");

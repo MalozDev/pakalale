@@ -585,6 +585,10 @@ export async function sendMessage(data: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to send message (${res.status})`);
+  }
   return res.json();
 }
 
@@ -598,6 +602,10 @@ export async function createChat(data: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to create chat (${res.status})`);
+  }
   return res.json();
 }
 

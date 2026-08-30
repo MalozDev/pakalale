@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { useShop, updateShop } from "@/hooks/useApi";
 import { useUpload } from "@/hooks/useUpload";
 import UploadProgressBar from "@/components/UploadProgressBar";
+import VerificationSection from "@/components/VerificationSection";
 
 const ALL_SPECIALTIES = [
   "Electronics",
@@ -485,6 +486,9 @@ export default function ShopSettingsPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Verification Documents */}
+            <VerificationSection shopData={shopData} refetch={refetch} />
           </>
         )}
       </main>

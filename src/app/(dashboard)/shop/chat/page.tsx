@@ -187,30 +187,66 @@ export default function ShopChatPage() {
     onStopTyping: handleStopTyping,
   });
 
-  const handleSendMessage = async (
-    content: string,
-    type?: "text" | "image" | "file" | "voice"
-  ) => {
-    if (!content.trim() || !activeChat || !user) return;
+  const pendingVoiceIdRef = useRef<string | null>(null);
 
-    const tempId = `pending-${Date.now()}`;
+  const handlePendingVoice = (blobUrl: string) => {
+    if (!activeChat || !user) return;
     const senderName = `${user.firstName} ${user.lastName}`;
-
+    const tempId = `pending-voice-${Date.now()}`;
+    pendingVoiceIdRef.current = tempId;
     const pendingMsg: MessageData = {
       id: tempId,
       chatId: activeChat.id,
       senderId: user.id,
       senderName,
       senderRole: "shop_owner",
-      content,
-      type: type || "text",
+      content: blobUrl,
+      type: "voice",
       isRead: false,
       readBy: [],
-      replyTo: replyTo || undefined,
       timestamp: new Date().toISOString(),
     };
-
     setPendingMessages((prev) => [...prev, pendingMsg]);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      isUserScrolledUp.current = false;
+    }, 50);
+  };
+
+  const handleSendMessage = async (
+    content: string,
+    type?: "text" | "image" | "file" | "voice"
+  ) => {
+    if (!content.trim() || !activeChat || !user) return;
+
+    const senderName = `${user.firstName} ${user.lastName}`;
+    const existingVoiceId = pendingVoiceIdRef.current;
+    pendingVoiceIdRef.current = null;
+    let tempId = `pending-${Date.now()}`;
+
+    // For voice notes, the pending message was already shown with a blob URL.
+    // Update it in place with the Cloudinary URL instead of creating a duplicate.
+    if (existingVoiceId && type === "voice") {
+      tempId = existingVoiceId;
+      setPendingMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, content } : m))
+      );
+    } else {
+      const pendingMsg: MessageData = {
+        id: tempId,
+        chatId: activeChat.id,
+        senderId: user.id,
+        senderName,
+        senderRole: "shop_owner",
+        content,
+        type: type || "text",
+        isRead: false,
+        readBy: [],
+        replyTo: replyTo || undefined,
+        timestamp: new Date().toISOString(),
+      };
+      setPendingMessages((prev) => [...prev, pendingMsg]);
+    }
 
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -711,6 +747,7 @@ export default function ShopChatPage() {
         <MessageInput
           onSendMessage={handleSendMessage}
           onSendImage={handleSendImage}
+          onPendingVoice={handlePendingVoice}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           placeholder={`Message ${otherName}...`}

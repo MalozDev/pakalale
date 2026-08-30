@@ -9,6 +9,7 @@ interface MessageInputProps {
   onSendMessage: (content: string, type?: "text" | "image" | "file" | "voice") => void;
   onSendFile?: (file: File) => void;
   onSendImage?: (file: File) => void;
+  onPendingVoice?: (blobUrl: string) => void;
   replyTo?: { messageId: string; content: string; senderName: string } | null;
   onCancelReply?: () => void;
   placeholder?: string;
@@ -22,6 +23,7 @@ export default function MessageInput({
   onSendMessage,
   onSendFile,
   onSendImage,
+  onPendingVoice,
   replyTo,
   onCancelReply,
   placeholder = "Type a message...",
@@ -152,7 +154,12 @@ export default function MessageInput({
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        // Upload voice note to Cloudinary
+
+        // Show voice note immediately with local blob URL
+        const blobUrl = URL.createObjectURL(audioBlob);
+        onPendingVoice?.(blobUrl);
+
+        // Upload voice note to Cloudinary in background
         try {
           const formData = new FormData();
           const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: "audio/webm" });
@@ -163,6 +170,8 @@ export default function MessageInput({
           if (res.ok) {
             const data = await res.json();
             onSendMessage(data.url, "voice");
+            // Revoke blob URL after Cloudinary URL is available
+            URL.revokeObjectURL(blobUrl);
           } else {
             console.error("Voice upload failed");
           }
