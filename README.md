@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pakalale
 
-## Getting Started
+## both anything, create .env file for our backend connection
 
-First, run the development server:
+## Run Locally
+## method 1
 
+Install [Node.js 20](https://nodejs.org/)
 ```bash
+## first run
+npm ci
+## then
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app uses `MONGODB_URI` to connect to MongoDB. Without it, the app tries `mongodb://localhost:27017/pakalale`. For image uploads, configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## method 2 Run with Docker
 
-## Learn More
+Install Docker, then create a `.env` file in the project directory with the settings needed for your environment. For example:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
+NEXTAUTH_SECRET=replace-with-a-random-secret
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Cloudinary settings are needed for image uploads. Keep `.env` private; do not commit credentials. Build and run the container:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker build -t pakalale .
+docker run --rm --name pakalale --env-file .env -p 3000:3000 pakalale
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000). The container runs the production build and the custom server, including Socket.IO. Docker does not start MongoDB for you: `MONGODB_URI` must point to a database reachable from inside the container. In particular, `localhost` inside the container refers to the container itself, not the host machine.
